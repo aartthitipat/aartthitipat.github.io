@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CheckGroup — Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar"></nav>
+
+  <!-- Background gradient -->
+  <div
+    style="position:fixed; inset:0; background: radial-gradient(ellipse at 10% 20%, rgba(245,166,35,0.04) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(167,139,250,0.04) 0%, transparent 50%); pointer-events:none; z-index:0;">
+  </div>
+
+  <div class="container--wide" style="position:relative; z-index:1;">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 id="welcomeText">กลุ่มของคุณ</h1>
+        <p id="welcomeSub" style="color: var(--text-muted); margin-top: 4px;"></p>
+      </div>
+      <a href="create-group.html" class="btn btn--primary">
+        ➕ สร้างกลุ่มใหม่
+      </a>
+    </div>
+
+    <!-- Join group box -->
+    <div class="join-box">
+      <div style="font-size: 28px;">🔑</div>
+      <div style="flex:1;">
+        <div style="font-weight: 700; margin-bottom: 4px;">เข้าร่วมกลุ่มด้วยโค้ด</div>
+        <div style="font-size: 0.83rem; color: var(--text-muted);">ขอโค้ดเชิญ 6 หลักจากเจ้าของกลุ่ม</div>
+      </div>
+      <div class="join-box__input-wrap">
+        <input class="form-input" type="text" id="joinCode" placeholder="XXXXXX" maxlength="6"
+          style="text-transform: uppercase; letter-spacing: 4px; font-family: 'DM Mono', monospace; font-size: 1rem; max-width: 200px;" />
+        <button class="btn btn--secondary" onclick="handleJoin()">เข้าร่วม</button>
+      </div>
+    </div>
+
+    <!-- Groups grid -->
+    <div class="groups-grid" id="groupsGrid">
+      <!-- จะ render ด้วย JS -->
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    // ── Auth check ──
+    const currentUser = Auth.requireLogin();
+    Auth.renderNavbar(currentUser);
+
+    // ── Welcome text ──
+    document.getElementById('welcomeText').textContent = `สวัสดี, ${currentUser.username} 👋`;
+    document.getElementById('welcomeSub').textContent = 'กลุ่ม Checklist ทั้งหมดที่คุณอยู่';
+
+    // ── Render groups ──
+    async function renderGroups() {
+      const grid = document.getElementById('groupsGrid');
+      const isAdmin = Auth.isAdmin(currentUser);
+
+      // กำลังโหลด...
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: var(--text-muted);">กำลังโหลดข้อมูลกลุ่ม...</div>';
+
+      const groups = isAdmin ? await DB.getGroups() : await DB.getGroupsForUser(currentUser.id);
+
+      if (isAdmin) {
+        document.getElementById('welcomeSub').textContent = 'กลุ่ม Checklist ทั้งหมดในระบบ (โหมดแอดมิน)';
+        document.getElementById('welcomeSub').style.color = 'var(--accent)';
+      }
+
+      if (groups.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state__icon">📋</div>
+            <h3>ยังไม่มีกลุ่ม</h3>
+            <p style="margin-bottom: 24px;">สร้างกลุ่มใหม่หรือขอโค้ดเชิญจากเพื่อน</p>
+            <a href="create-group.html" class="btn btn--primary">➕ สร้างกลุ่มแรกของคุณ</a>
+          </div>
+        `;
+        return;
+      }
+
+      // สีที่ใช้ rotate ให้กลุ่มแต่ละกลุ่ม
+      const colors = ['#f5a623', '#a78bfa', '#34d399', '#60a5fa', '#f472b6', '#fb923c'];
+
+      grid.innerHTML = groups.map((group, i) => {
+        const isOwner = group.ownerId === currentUser.id;
+        const stats = DB.getGroupStats(group);
+        const color = colors[i % colors.length];
+        const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+
+        return `
+          <a href="group.html?id=${group.id}" class="group-card" style="animation-delay: ${i * 0.06}s;">
+            <div class="group-card__header">
+              <div class="group-card__icon" style="background: ${color}22; color: ${color};">
+                ${group.emoji}
+              </div>
+              <div>
+                <span class="group-card__badge ${isOwner ? 'badge--owner' : 'badge--member'}">
+                  ${isOwner ? '👑 เจ้าของ' : '👤 สมาชิก'}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div class="group-card__name">${escapeHtml(group.name)}</div>
+              ${group.description ? `<div class="group-card__desc">${escapeHtml(group.description)}</div>` : ''}
+            </div>
+
+            <!-- Progress bar -->
+            ${stats.total > 0 ? `
+              <div style="margin-top: 4px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color: var(--text-muted); margin-bottom:6px;">
+                  <span>ความคืบหน้า</span>
+                  <span style="color: ${color}; font-weight:700;">${stats.done}/${stats.total} (${pct}%)</span>
+                </div>
+                <div style="height:4px; background: var(--surface-3); border-radius:99px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition: width 0.5s ease;"></div>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="group-card__stats">
+              <div class="group-card__stat">👥 ${group.members.length} คน</div>
+              <div class="group-card__stat">📂 ${group.categories.length} หมวดหมู่</div>
+              <div class="group-card__stat">📝 ${stats.total} รายการ</div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    // ── Join group ──
+    async function handleJoin() {
+      const code = document.getElementById('joinCode').value.trim();
+      if (!code || code.length !== 6) {
+        Auth.showToast('กรุณากรอกโค้ด 6 หลัก', 'error');
+        return;
+      }
+
+      const btn = document.querySelector('.join-box button');
+      btn.disabled = true;
+      btn.textContent = 'กำลังโหลด...';
+
+      const result = await DB.joinGroup(code, currentUser);
+
+      btn.disabled = false;
+      btn.textContent = 'เข้าร่วม';
+      if (result.success) {
+        Auth.showToast(`เข้าร่วมกลุ่ม "${result.group.name}" สำเร็จ! 🎉`, 'success');
+        document.getElementById('joinCode').value = '';
+        renderGroups();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // Enter key บน join input
+    document.getElementById('joinCode').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleJoin();
+    });
+
+    // Force uppercase on input
+    document.getElementById('joinCode').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // ── Helper ──
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ── Init ──
+    renderGroups();
+  </script>
+</body>
+
+</html>

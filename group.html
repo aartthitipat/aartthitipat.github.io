@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CheckGroup — กลุ่ม</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar"></nav>
+
+  <!-- ── Group Hero ── -->
+  <div class="group-hero" id="groupHero" style="position:relative; z-index:1;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <a href="dashboard.html" class="group-hero__back">← กลับ Dashboard</a>
+
+      <div class="group-hero__top">
+        <!-- Left: Title & meta -->
+        <div>
+          <div class="group-hero__title-row">
+            <div class="group-hero__icon" id="heroIcon">📋</div>
+            <div>
+              <h1 class="group-hero__name" id="heroName">กำลังโหลด...</h1>
+              <div class="group-hero__meta" id="heroMeta"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Invite code (owner only) + Actions -->
+        <div id="heroRight" style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Role notice ── -->
+  <div style="max-width: 1200px; margin: 24px auto 0; padding: 0 32px;" id="roleNoticeWrap"></div>
+
+  <!-- ── Members Panel ── -->
+  <div style="max-width: 1200px; margin: 16px auto 0; padding: 0 32px;" id="membersPanelWrap"></div>
+
+  <!-- ── Checklist Area ── -->
+  <div class="checklist-area">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+      <h3
+        style="font-size: 1rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+        📂 หมวดหมู่ทั้งหมด <span id="catCount" style="color: var(--accent);"></span>
+      </h3>
+      <div id="statsRow" style="font-size:0.85rem; color: var(--text-muted);"></div>
+    </div>
+    <div class="checklist-grid" id="checklistGrid">
+      <div style="text-align:center; padding: 60px; color: var(--text-muted);">กำลังโหลด...</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Modal: Add Category ── -->
+  <div class="modal-overlay" id="modalAddCat" style="display:none;">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>➕ เพิ่มหมวดหมู่</h3>
+        <button class="modal__close" onclick="closeModal('modalAddCat')">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label">ชื่อหมวดหมู่</label>
+          <input class="form-input" type="text" id="newCatName" placeholder="เช่น อาหาร, เสื้อผ้า, อุปกรณ์..."
+            maxlength="40" />
+          <span class="form-error" id="catNameError" style="display:none;"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">สีหมวดหมู่</label>
+          <div class="color-picker" id="catColorPicker"></div>
+          <input type="hidden" id="newCatColor" value="#f5a623" />
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" onclick="closeModal('modalAddCat')">ยกเลิก</button>
+        <button class="btn btn--primary" onclick="submitAddCategory()">เพิ่มหมวดหมู่</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirm Delete Category ── -->
+  <div class="modal-overlay" id="modalDelCat" style="display:none;">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 style="color: var(--danger);">🗑️ ลบหมวดหมู่?</h3>
+        <button class="modal__close" onclick="closeModal('modalDelCat')">✕</button>
+      </div>
+      <p style="color: var(--text-muted); font-size:0.9rem; margin-bottom: 8px;">
+        ต้องการลบหมวดหมู่ "<strong id="delCatName"></strong>" ใช่ไหม?
+        <br /><span style="color: var(--danger); font-size:0.82rem;">รายการทั้งหมดในหมวดนี้จะถูกลบด้วย</span>
+      </p>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" onclick="closeModal('modalDelCat')">ยกเลิก</button>
+        <button class="btn btn--danger" onclick="confirmDeleteCategory()">ลบเลย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Delete Group ── -->
+  <div class="modal-overlay" id="modalDelGroup" style="display:none;">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 style="color: var(--danger);">⚠️ ลบกลุ่ม?</h3>
+        <button class="modal__close" onclick="closeModal('modalDelGroup')">✕</button>
+      </div>
+      <p style="color: var(--text-muted); font-size:0.9rem; margin-bottom: 8px;">
+        ต้องการลบกลุ่มนี้ถาวรใช่ไหม? <strong style="color:var(--danger)">ไม่สามารถกู้คืนได้</strong>
+      </p>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" onclick="closeModal('modalDelGroup')">ยกเลิก</button>
+        <button class="btn btn--danger" onclick="confirmDeleteGroup()">ลบกลุ่มถาวร</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    // ── State ──────────────────────────────────────────────
+    const currentUser = Auth.requireLogin();
+    Auth.renderNavbar(currentUser);
+
+    const params = new URLSearchParams(window.location.search);
+    const groupId = params.get('id');
+
+    let group = null;
+    let isOwner = false;
+    let canEditChecklist = false;
+    let pendingDelCatId = null;
+
+    // ── Color options ──
+    const COLORS = ['#f5a623', '#a78bfa', '#34d399', '#60a5fa', '#f472b6', '#fb923c', '#f43f5e', '#06b6d4', '#84cc16', '#eab308'];
+
+    // ── Init ───────────────────────────────────────────────
+    async function init() {
+      if (!groupId) { window.location.href = 'dashboard.html'; return; }
+
+      group = await DB.findGroupById(groupId);
+      if (!group) { window.location.href = 'dashboard.html'; return; }
+
+      // เช็คว่า user อยู่ในกลุ่มไหม (หรือเป็น admin)
+      const isAdmin = Auth.isAdmin(currentUser);
+      const member = group.members.find(m => m.userId === currentUser.id);
+      if (!member && !isAdmin) { window.location.href = 'dashboard.html'; return; }
+
+      isOwner = (group.ownerId === currentUser.id) || isAdmin;
+      canEditChecklist = isOwner || (member && member.canEdit);
+
+      renderHero();
+      renderRoleNotice();
+      renderMembers();
+      renderChecklist();
+      setupCatColorPicker();
+    }
+
+    // ── Helpers ────────────────────────────────────────────
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function reloadGroup() {
+      group = await DB.findGroupById(groupId);
+    }
+
+    // ── Hero ───────────────────────────────────────────────
+    function renderHero() {
+      document.title = `${group.name} — CheckGroup`;
+      document.getElementById('heroIcon').textContent = group.emoji;
+      document.getElementById('heroName').textContent = group.name;
+
+      const stats = DB.getGroupStats(group);
+      const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+
+      document.getElementById('heroMeta').innerHTML = `
+        <div class="group-hero__chip">👥 ${group.members.length} สมาชิก</div>
+        <div class="group-hero__chip">📂 ${group.categories.length} หมวดหมู่</div>
+        <div class="group-hero__chip">✅ ${stats.done}/${stats.total} รายการ (${pct}%)</div>
+        ${group.description ? `<div class="group-hero__chip" style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(group.description)}</div>` : ''}
+      `;
+
+      // Right panel
+      const right = document.getElementById('heroRight');
+      if (isOwner) {
+        right.innerHTML = `
+          <div class="invite-code">
+            <div>
+              <div class="invite-code__label">🔑 โค้ดเชิญ</div>
+              <div class="invite-code__value" id="inviteCodeDisplay">${group.inviteCode}</div>
+            </div>
+            <button class="btn btn--ghost btn--sm" onclick="copyCode()" title="คัดลอกโค้ด">📋</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn--ghost btn--sm" onclick="regenerateCode()">🔄 โค้ดใหม่</button>
+            <button class="btn btn--danger btn--sm" onclick="openModal('modalDelGroup')">🗑️ ลบกลุ่ม</button>
+          </div>
+        `;
+      } else {
+        right.innerHTML = `
+          <button class="btn btn--ghost btn--sm" onclick="handleLeave()">🚪 ออกจากกลุ่ม</button>
+        `;
+      }
+    }
+
+    function copyCode() {
+      const code = group.inviteCode;
+      navigator.clipboard.writeText(code).then(() => {
+        Auth.showToast('คัดลอกโค้ด ' + code + ' แล้ว!', 'success');
+      }).catch(() => {
+        Auth.showToast('โค้ด: ' + code, '');
+      });
+    }
+
+    async function regenerateCode() {
+      const groups = await DB.getGroups();
+      const g = groups.find(x => x.id === groupId);
+      if (g) {
+        const result = await DB.regenerateInviteCode(groupId, currentUser.id);
+        if (result.success) {
+          group.inviteCode = result.code;
+          document.getElementById('inviteCodeDisplay').textContent = result.code;
+          Auth.showToast('สร้างโค้ดใหม่แล้ว: ' + result.code, 'success');
+        } else {
+          Auth.showToast(result.error, 'error');
+        }
+      }
+    }
+
+    // ── Role Notice ────────────────────────────────────────
+    function renderRoleNotice() {
+      const wrap = document.getElementById('roleNoticeWrap');
+      if (isOwner) {
+        wrap.innerHTML = `
+          <div class="role-notice role-notice--owner">
+            👑 คุณเป็น <strong>เจ้าของกลุ่ม</strong> — สามารถจัดการสิทธิ์ เพิ่ม/ลบหมวดหมู่และรายการได้
+          </div>
+        `;
+      } else if (canEditChecklist) {
+        wrap.innerHTML = `
+          <div class="role-notice role-notice--owner" style="background: var(--accent-dim); border-color: rgba(245,166,35,0.3);">
+            ✏️ คุณมีสิทธิ์ <strong>แก้ไข</strong> — สามารถติ๊กรายการ และจัดการรายการได้
+          </div>
+        `;
+      } else {
+        wrap.innerHTML = `
+          <div class="role-notice role-notice--member">
+            👤 คุณเป็น <strong>ผู้ชม</strong> — ยืนดูได้อย่างเดียวเท่านั้น
+          </div>
+        `;
+      }
+    }
+
+    // ── Members ────────────────────────────────────────────
+    function renderMembers() {
+      const wrap = document.getElementById('membersPanelWrap');
+      const chips = group.members.map(m => {
+        const initial = m.username.charAt(0).toUpperCase();
+        const isThisOwner = m.userId === group.ownerId;
+        return `
+          <div class="member-chip" title="${m.username}${isThisOwner ? ' (เจ้าของ)' : ''}">
+            <div class="member-avatar ${isThisOwner ? 'member-avatar--owner' : ''}">${initial}</div>
+            <span>${escapeHtml(m.username)}</span>
+            ${isThisOwner ? '<span style="font-size:0.7rem; color:var(--accent);">👑</span>' : ''}
+            ${!isThisOwner ? `<span style="font-size:0.7rem; color:var(--text-muted); margin-left:4px;">${m.canEdit ? '✏️ แก้ไขได้' : '👁️ ผู้ชม'}</span>` : ''}
+            ${isOwner && !isThisOwner ? `
+              <button class="btn btn--ghost" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 4px; border: none; background: var(--surface-3);" onclick="toggleEdit('${m.userId}')" title="เปลี่ยนสิทธิ์">🔄</button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      wrap.innerHTML = `
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:0.85rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+              👥 สมาชิก (${group.members.length})
+            </div>
+          </div>
+          <div class="members-grid">${chips}</div>
+        </div>
+      `;
+    }
+
+    // ── Color picker for modal ─────────────────────────────
+    function setupCatColorPicker() {
+      const picker = document.getElementById('catColorPicker');
+      COLORS.forEach((c, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+        dot.style.background = c;
+        dot.title = c;
+        dot.addEventListener('click', () => {
+          document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+          document.getElementById('newCatColor').value = c;
+        });
+        picker.appendChild(dot);
+      });
+    }
+
+    // ── Checklist ──────────────────────────────────────────
+    async function renderChecklist() {
+      await reloadGroup();
+      const grid = document.getElementById('checklistGrid');
+      const stats = DB.getGroupStats(group);
+      const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+
+      document.getElementById('catCount').textContent = `(${group.categories.length})`;
+      document.getElementById('statsRow').innerHTML = stats.total > 0
+        ? `✅ ${stats.done} / ${stats.total} <span style="color:var(--accent); font-weight:700; margin-right:8px;">${pct}%</span>
+           ${canEditChecklist ? `<button class="btn btn--ghost btn--sm" onclick="handleReset()" style="padding: 4px 10px; font-size: 0.75rem;">🔄 รีเซ็ตทั้งหมด</button>` : ''}`
+        : '';
+
+      // Build category cards
+      let html = group.categories.map((cat, ci) => renderCategoryCard(cat, ci)).join('');
+
+      // Add category card (owner only)
+      if (isOwner) {
+        html += `
+          <div class="add-category-card" onclick="openModal('modalAddCat')">
+            <div class="add-category-card__icon">📂</div>
+            <div>+ เพิ่มหมวดหมู่</div>
+          </div>
+        `;
+      }
+
+      if (group.categories.length === 0) {
+        html = `
+          <div class="empty-state" style="grid-column: 1/-1;">
+            <div class="empty-state__icon">📂</div>
+            <h3>${isOwner ? 'ยังไม่มีหมวดหมู่' : 'ยังไม่มีรายการ'}</h3>
+            <p>${isOwner ? 'กดปุ่ม + เพิ่มหมวดหมู่ เพื่อเริ่มสร้าง Checklist' : 'รอเจ้าของกลุ่มเพิ่มหมวดหมู่'}</p>
+          </div>
+        `;
+        if (isOwner) {
+          html += `
+            <div class="add-category-card" onclick="openModal('modalAddCat')" style="min-height:80px;">
+              <div class="add-category-card__icon">📂</div>
+              <div>+ เพิ่มหมวดหมู่แรก</div>
+            </div>
+          `;
+        }
+      }
+
+      grid.innerHTML = html;
+      attachItemEvents();
+
+      // Update hero stats
+      document.getElementById('heroMeta').querySelector('[class*="chip"]:nth-child(3)').textContent =
+        `✅ ${stats.done}/${stats.total} รายการ (${pct}%)`;
+    }
+
+    function renderCategoryCard(cat, ci) {
+      const checkedCount = cat.items.filter(i => i.checked).length;
+      const delay = ci * 0.06;
+
+      const itemsHtml = cat.items.map(item => `
+        <div class="checklist-item ${item.checked ? 'is-checked' : ''}" data-item-id="${item.id}" data-cat-id="${cat.id}">
+          <input
+            type="checkbox"
+            class="item-checkbox"
+            data-item-id="${item.id}"
+            data-cat-id="${cat.id}"
+            ${item.checked ? 'checked' : ''}
+          />
+          <div style="flex:1;">
+            <div class="item-text">${escapeHtml(item.text)}</div>
+            ${item.checked && item.checkedByName ? `<div class="item-checked-by">✓ โดย ${escapeHtml(item.checkedByName)}</div>` : ''}
+          </div>
+          ${canEditChecklist ? `
+            <button
+              class="btn btn--danger btn--icon item-delete"
+              style="width:28px; height:28px; font-size:14px;"
+              data-del-item="${item.id}"
+              data-del-cat="${cat.id}"
+              title="ลบรายการ"
+            >✕</button>
+          ` : ''}
+        </div>
+      `).join('');
+
+      const addRowHtml = canEditChecklist ? `
+        <div class="add-item-row">
+          <input
+            class="add-item-input"
+            type="text"
+            placeholder="+ พิมพ์รายการแล้วกด Enter..."
+            data-cat-id="${cat.id}"
+            maxlength="120"
+          />
+        </div>
+      ` : '';
+
+      const ownerActions = isOwner ? `
+        <div class="category-header__actions">
+          <button
+            class="btn btn--danger btn--icon"
+            style="width:28px; height:28px; font-size:14px;"
+            onclick="openDeleteCategory('${cat.id}', '${escapeHtml(cat.name)}')"
+            title="ลบหมวดหมู่"
+          >🗑</button>
+        </div>
+      ` : '';
+
+      return `
+        <div class="category-card" style="animation-delay: ${delay}s;">
+          <div class="category-header">
+            <div class="category-header__left">
+              <div class="category-dot" style="background: ${cat.color};"></div>
+              <div class="category-name">${escapeHtml(cat.name)}</div>
+              <div class="category-count">${checkedCount}/${cat.items.length}</div>
+            </div>
+            ${ownerActions}
+          </div>
+          <div class="category-items">
+            ${itemsHtml}
+            ${cat.items.length === 0 && !isOwner ? `<div style="padding: 16px; text-align:center; color: var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>` : ''}
+          </div>
+          ${addRowHtml}
+        </div>
+      `;
+    }
+
+    // Attach event listeners to dynamic elements
+    function attachItemEvents() {
+      // Checkbox toggle
+      document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.addEventListener('change', async () => {
+          const itemId = cb.dataset.itemId;
+          const catId = cb.dataset.catId;
+          const result = await DB.toggleItem(groupId, currentUser.id, catId, itemId);
+          if (result.success) {
+            renderChecklist();
+          } else {
+            Auth.showToast(result.error, 'error');
+            cb.checked = !cb.checked; // revert
+          }
+        });
+      });
+
+      // Delete item buttons
+      document.querySelectorAll('[data-del-item]').forEach(btn => {
+        btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          const itemId = btn.dataset.delItem;
+          const catId = btn.dataset.delCat;
+          const result = await DB.deleteItem(groupId, currentUser.id, catId, itemId);
+          if (result.success) {
+            Auth.showToast('ลบรายการแล้ว', 'success');
+            renderChecklist();
+          } else {
+            Auth.showToast(result.error, 'error');
+          }
+        });
+      });
+
+      // Add item inputs (Enter key)
+      document.querySelectorAll('.add-item-input').forEach(input => {
+        input.addEventListener('keydown', async e => {
+          if (e.key === 'Enter') {
+            const text = input.value.trim();
+            const catId = input.dataset.catId;
+            if (!text) return;
+            const result = await DB.addItem(groupId, currentUser.id, catId, text);
+            if (result.success) {
+              input.value = '';
+              renderChecklist();
+              // Focus back on same category's input
+              setTimeout(() => {
+                const inputs = document.querySelectorAll(`.add-item-input[data-cat-id="${catId}"]`);
+                if (inputs.length) inputs[0].focus();
+              }, 50);
+            } else {
+              Auth.showToast(result.error, 'error');
+            }
+          }
+        });
+      });
+    }
+
+    // ── Category Modal ─────────────────────────────────────
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+      // Focus input if add category modal
+      if (id === 'modalAddCat') {
+        setTimeout(() => document.getElementById('newCatName').focus(), 100);
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+      if (id === 'modalAddCat') {
+        document.getElementById('newCatName').value = '';
+        document.getElementById('catNameError').style.display = 'none';
+      }
+    }
+
+    // Close modal on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal(overlay.id);
+      });
+    });
+
+    // Enter key in modal
+    document.getElementById('newCatName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submitAddCategory();
+    });
+
+    async function submitAddCategory() {
+      const name = document.getElementById('newCatName').value.trim();
+      const color = document.getElementById('newCatColor').value;
+      const errEl = document.getElementById('catNameError');
+
+      if (!name) {
+        errEl.textContent = 'กรุณากรอกชื่อหมวดหมู่';
+        errEl.style.display = 'flex';
+        return;
+      }
+      errEl.style.display = 'none';
+
+      const result = await DB.addCategory(groupId, currentUser.id, { name, color });
+      if (result.success) {
+        closeModal('modalAddCat');
+        await renderChecklist();
+        Auth.showToast(`เพิ่มหมวดหมู่ "${name}" แล้ว! 🎉`, 'success');
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // ── Delete Category ────────────────────────────────────
+    function openDeleteCategory(catId, catName) {
+      pendingDelCatId = catId;
+      document.getElementById('delCatName').textContent = catName;
+      openModal('modalDelCat');
+    }
+
+    async function confirmDeleteCategory() {
+      if (!pendingDelCatId) return;
+      const result = await DB.deleteCategory(groupId, currentUser.id, pendingDelCatId);
+      if (result.success) {
+        closeModal('modalDelCat');
+        await renderChecklist();
+        Auth.showToast('ลบหมวดหมู่แล้ว', 'success');
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+      pendingDelCatId = null;
+    }
+
+    // ── Delete Group ───────────────────────────────────────
+    async function confirmDeleteGroup() {
+      const result = await DB.deleteGroup(groupId, currentUser.id);
+      if (result.success) {
+        Auth.showToast('ลบกลุ่มแล้ว', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+      } else {
+        Auth.showToast(result.error, 'error');
+        closeModal('modalDelGroup');
+      }
+    }
+
+    // ── Leave Group ────────────────────────────────────────
+    async function handleLeave() {
+      if (!confirm('ต้องการออกจากกลุ่มนี้ใช่ไหม?')) return;
+      const result = await DB.leaveGroup(groupId, currentUser.id);
+      if (result.success) {
+        Auth.showToast('ออกจากกลุ่มแล้ว', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // ── Owner Manage Permissions & Editor Reset ──
+    async function toggleEdit(userId) {
+      const result = await DB.toggleMemberEdit(groupId, currentUser.id, userId);
+      if (result.success) {
+        Auth.showToast(result.canEdit ? 'สิทธิ์การแก้ไข: แก้ไขได้' : 'สิทธิ์การแก้ไข: ดูได้อย่างเดียว', 'success');
+        await reloadGroup();
+        renderMembers();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    async function handleReset() {
+      if (!confirm('ต้องการรีเซ็ตรายการในทุกหมวดหมู่ใช่หรือไม่?')) return;
+      const result = await DB.resetChecklist(groupId, currentUser.id);
+      if (result.success) {
+        Auth.showToast('รีเซ็ตรายการสำเร็จ', 'success');
+        await renderChecklist();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // ── Start ──────────────────────────────────────────────
+    init();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CheckGroup — สร้างกลุ่มใหม่</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar"></nav>
+
+  <!-- Background -->
+  <div
+    style="position:fixed; inset:0; background: radial-gradient(ellipse at 70% 30%, rgba(245,166,35,0.05) 0%, transparent 60%); pointer-events:none; z-index:0;">
+  </div>
+
+  <div class="container--narrow" style="padding-top: 48px; padding-bottom: 64px; position:relative; z-index:1;">
+    <!-- Back link -->
+    <a href="dashboard.html"
+      style="display:inline-flex; align-items:center; gap:6px; color: var(--text-muted); font-size:0.88rem; margin-bottom:32px; text-decoration:none; transition: color 0.2s;">
+      ← กลับไป Dashboard
+    </a>
+
+    <div class="card" style="animation: fadeUp 0.35s ease;">
+      <h2 style="margin-bottom: 6px;">สร้างกลุ่มใหม่</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 32px;">
+        คุณจะเป็น <strong style="color: var(--accent);">เจ้าของกลุ่ม</strong> และจัดการ Checklist ได้แต่เพียงผู้เดียว
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- Group Name -->
+        <div class="form-group">
+          <label class="form-label" for="groupName">ชื่อกลุ่ม <span style="color: var(--danger);">*</span></label>
+          <input class="form-input" type="text" id="groupName" placeholder="เช่น ทริปญี่ปุ่น, ชอปปิ้ง, งานโปรเจกต์"
+            maxlength="60" />
+          <span class="form-error" id="nameError" style="display:none;"></span>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label" for="groupDesc">คำอธิบาย (ไม่บังคับ)</label>
+          <input class="form-input" type="text" id="groupDesc" placeholder="อธิบายสั้นๆ ว่ากลุ่มนี้ใช้ทำอะไร"
+            maxlength="120" />
+        </div>
+
+        <!-- Emoji picker -->
+        <div class="form-group">
+          <label class="form-label">ไอคอนกลุ่ม</label>
+          <div id="emojiPicker" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          </div>
+          <input type="hidden" id="selectedEmoji" value="📋" />
+        </div>
+
+        <!-- Preview -->
+        <div
+          style="background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+          <div
+            style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
+            ตัวอย่าง</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="previewIcon"
+              style="width:52px; height:52px; border-radius:14px; background: var(--accent-dim); display:flex; align-items:center; justify-content:center; font-size:26px; border:1px solid var(--accent-glow);">
+              📋</div>
+            <div>
+              <div id="previewName" style="font-weight: 700; font-size: 1.05rem; color: var(--text-muted);">
+                ชื่อกลุ่มของคุณ</div>
+              <div id="previewDesc" style="font-size: 0.82rem; color: var(--text-dim);">คำอธิบาย...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- General error -->
+        <div id="createError"
+          style="display:none; padding: 10px 16px; background: var(--danger-dim); border: 1px solid rgba(240,82,82,0.2); border-radius: 8px; color: var(--danger); font-size:0.88rem;">
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; gap: 10px;">
+          <a href="dashboard.html" class="btn btn--ghost" style="flex:1;">ยกเลิก</a>
+          <button class="btn btn--primary" style="flex:2;" id="createBtn" onclick="handleCreate()">
+            ✨ สร้างกลุ่ม
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const currentUser = Auth.requireLogin();
+    Auth.renderNavbar(currentUser);
+
+    // ── Emoji Options ──
+    const emojis = [
+      '📋', '✅', '🗒️', '🛒', '✈️', '🏖️', '🎮', '🍕', '📚', '💼',
+      '🏠', '🎵', '💪', '🎯', '🚗', '💰', '🎁', '🌟', '🔥', '💡',
+      '🎉', '🌈', '🍜', '📱', '🖥️', '🎓', '⚽', '🏋️', '🌿', '🐾'
+    ];
+
+    const emojiPicker = document.getElementById('emojiPicker');
+    let selectedEmoji = '📋';
+
+    emojis.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = emoji;
+      btn.className = 'emoji-btn';
+      btn.style.cssText = `
+        width: 40px; height: 40px; border-radius: 10px;
+        border: 2px solid transparent;
+        background: var(--surface-2); font-size: 20px;
+        cursor: pointer; transition: all 0.15s;
+        display: flex; align-items: center; justify-content: center;
+      `;
+      if (emoji === '📋') {
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.background = 'var(--accent-dim)';
+      }
+      btn.addEventListener('click', () => {
+        // reset all
+        document.querySelectorAll('.emoji-btn').forEach(b => {
+          b.style.borderColor = 'transparent';
+          b.style.background = 'var(--surface-2)';
+        });
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.background = 'var(--accent-dim)';
+        selectedEmoji = emoji;
+        document.getElementById('selectedEmoji').value = emoji;
+        document.getElementById('previewIcon').textContent = emoji;
+      });
+      emojiPicker.appendChild(btn);
+    });
+
+    // ── Live preview ──
+    document.getElementById('groupName').addEventListener('input', e => {
+      const val = e.target.value.trim();
+      document.getElementById('previewName').textContent = val || 'ชื่อกลุ่มของคุณ';
+      document.getElementById('previewName').style.color = val ? 'var(--text)' : 'var(--text-muted)';
+    });
+    document.getElementById('groupDesc').addEventListener('input', e => {
+      const val = e.target.value.trim();
+      document.getElementById('previewDesc').textContent = val || 'คำอธิบาย...';
+      document.getElementById('previewDesc').style.color = val ? 'var(--text-muted)' : 'var(--text-dim)';
+    });
+
+    // ── Create handler ──
+    async function handleCreate() {
+      const name = document.getElementById('groupName').value.trim();
+      const desc = document.getElementById('groupDesc').value.trim();
+      const emoji = selectedEmoji;
+      const btn = document.getElementById('createBtn');
+      const err = document.getElementById('createError');
+
+      err.style.display = 'none';
+      document.getElementById('nameError').style.display = 'none';
+      document.getElementById('groupName').classList.remove('form-input--error');
+
+      if (!name) {
+        document.getElementById('nameError').textContent = 'กรุณากรอกชื่อกลุ่ม';
+        document.getElementById('nameError').style.display = 'flex';
+        document.getElementById('groupName').classList.add('form-input--error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'กำลังสร้าง...';
+
+      const result = await DB.createGroup({ name, description: desc, emoji, currentUser });
+
+      if (result.success) {
+        btn.textContent = '✓ สร้างสำเร็จ!';
+        setTimeout(() => {
+          window.location.href = `group.html?id=${result.group.id}`;
+        }, 600);
+      } else {
+        err.textContent = result.error;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '✨ สร้างกลุ่ม';
+      }
+    }
+
+    // Enter key
+    document.getElementById('groupName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('groupDesc').focus();
+    });
+    document.getElementById('groupDesc').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleCreate();
+    });
+  </script>
+</body>
+
+</html>

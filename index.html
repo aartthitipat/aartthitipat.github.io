@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CheckGroup — เข้าสู่ระบบ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- ── Background ── -->
+  <div class="auth-bg"></div>
+
+  <!-- ── Auth Page ── -->
+  <main class="auth-page">
+    <div class="auth-card">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon">✅</div>
+        <div class="auth-logo-text">Check<span>Group</span></div>
+      </div>
+
+      <!-- Title -->
+      <h2 style="margin-bottom: 6px;">ยินดีต้อนรับกลับ 👋</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px;">
+        เข้าสู่ระบบเพื่อดูและจัดการ Checklist ของกลุ่มคุณ
+      </p>
+
+      <!-- Form -->
+      <div class="auth-form" id="loginForm">
+        <!-- Username -->
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input class="form-input" type="text" id="username" placeholder="กรอก username ของคุณ"
+            autocomplete="username" />
+          <span class="form-error" id="usernameError" style="display:none;"></span>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="password">รหัสผ่าน</label>
+          <input class="form-input" type="password" id="password" placeholder="กรอกรหัสผ่าน"
+            autocomplete="current-password" />
+          <span class="form-error" id="passwordError" style="display:none;"></span>
+        </div>
+
+        <!-- Error message -->
+        <div id="loginError" class="form-error"
+          style="display:none; padding: 10px; background: var(--danger-dim); border-radius: 8px; border: 1px solid rgba(240,82,82,0.2);">
+        </div>
+
+        <!-- Submit -->
+        <button class="btn btn--primary btn--full btn--lg" id="loginBtn" onclick="handleLogin()">
+          เข้าสู่ระบบ
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="auth-footer">
+        ยังไม่มีบัญชี?
+        <a href="register.html">สมัครสมาชิกฟรี →</a>
+      </div>
+
+      <!-- Demo hint -->
+      <div
+        style="margin-top: 20px; padding: 12px 16px; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--border);">
+        <p style="font-size: 0.78rem; color: var(--text-muted); text-align: center;">
+          💡 ยังไม่มีบัญชี? สมัครก่อนได้เลย ไม่ต้องใช้ email จริง
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    // ถ้า login แล้วให้ redirect ไป dashboard
+    Auth.redirectIfLoggedIn();
+
+    // กด Enter ใน input ก็ login ได้
+    document.getElementById('username').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('password').focus();
+    });
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+
+      // ล้าง error เก่า
+      errorEl.style.display = 'none';
+
+      // Validate
+      if (!username) {
+        document.getElementById('username').classList.add('form-input--error');
+        document.getElementById('usernameError').textContent = 'กรุณากรอก username';
+        document.getElementById('usernameError').style.display = 'flex';
+        return;
+      }
+      document.getElementById('usernameError').style.display = 'none';
+      document.getElementById('username').classList.remove('form-input--error');
+
+      if (!password) {
+        document.getElementById('password').classList.add('form-input--error');
+        document.getElementById('passwordError').textContent = 'กรุณากรอกรหัสผ่าน';
+        document.getElementById('passwordError').style.display = 'flex';
+        return;
+      }
+      document.getElementById('passwordError').style.display = 'none';
+      document.getElementById('password').classList.remove('form-input--error');
+
+      // ปิดปุ่มระหว่าง process
+      btn.disabled = true;
+      btn.textContent = 'กำลังเข้าสู่ระบบ...';
+
+      // Login
+      const result = await DB.login(username, password);
+
+      if (result.success) {
+        btn.textContent = '✓ เข้าสู่ระบบสำเร็จ!';
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+      } else {
+        errorEl.innerHTML = '⚠️ ' + result.error;
+        errorEl.style.display = 'flex';
+        btn.disabled = false;
+        btn.textContent = 'เข้าสู่ระบบ';
+        // Shake animation
+        const card = document.querySelector('.auth-card');
+        card.style.animation = 'none';
+        requestAnimationFrame(() => {
+          card.style.animation = 'shake 0.3s ease';
+        });
+      }
+    }
+
+    // Shake keyframe
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        75% { transform: translateX(8px); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+
+</html>
