@@ -4,16 +4,20 @@
 
 const SUPABASE_URL = 'https://ejunahjyottlrrhvwfck.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqdW5haGp5b3R0bHJyaHZ3ZmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NDQwOTMsImV4cCI6MjA5MzEyMDA5M30.z5HhHD1i760Q0tHnOLCgX2tYwvL8ujnTpl0HMWaQaRI';
-const { createClient } = window.supabase || {};
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let _sb;
+try {
+  const { createClient } = window.supabase;
+  _sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('[DB] Supabase client initialized OK');
+} catch (e) {
+  console.error('[DB] Supabase init FAILED:', e);
+  alert('ไม่สามารถเชื่อมต่อ Supabase ได้ — กรุณาตรวจสอบ internet');
+}
 
 const DB = {
-  // ─── Keys for Session Storage ──────────────────────
-  KEYS: {
-    CURRENT: 'cl_current',
-  },
+  KEYS: { CURRENT: 'cl_current' },
 
-  // ─── Helpers ─────────────────────────────────────────
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   },
@@ -24,35 +28,39 @@ const DB = {
 
   // ─── Users ───────────────────────────────────────────
   async findUserByUsername(username) {
-    const { data, error } = await supabase
+    console.log('[DB] findUserByUsername:', username);
+    const { data, error } = await _sb
       .from('cl_users')
       .select('data')
       .eq('username', username.toLowerCase())
-      .single();
-    if (error || !data) return null;
+      .maybeSingle();
+    if (error) { console.error('[DB] findUserByUsername error:', error); return null; }
+    if (!data) return null;
     return data.data;
   },
 
   async findUserById(id) {
-    const { data, error } = await supabase
+    const { data, error } = await _sb
       .from('cl_users')
       .select('data')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     if (error || !data) return null;
     return data.data;
   },
 
   async createUser({ username, email, password }) {
+    console.log('[DB] createUser:', username, email);
+
     const existingUser = await this.findUserByUsername(username);
     if (existingUser) {
       return { success: false, error: 'Username นี้ถูกใช้แล้ว' };
     }
 
-    const { data: emailCheck } = await supabase
+    const { data: emailCheck } = await _sb
       .from('cl_users')
       .select('id')
-      .filter('data->>email', 'eq', email.toLowerCase())
+      .filter('data->>email', 'ilike', email.toLowerCase())
       .maybeSingle();
 
     if (emailCheck) {
@@ -69,13 +77,17 @@ const DB = {
       createdAt: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('cl_users').insert({
+    const { error } = await _sb.from('cl_users').insert({
       id: id,
       username: username.toLowerCase(),
       data: user
     });
 
-    if (error) return { success: false, error: 'เกิดข้อผิดพลาดในการสร้างบัญชี' };
+    if (error) {
+      console.error('[DB] createUser insert error:', error);
+      return { success: false, error: 'เกิดข้อผิดพลาดในการสร้างบัญชี: ' + error.message };
+    }
+    console.log('[DB] createUser OK:', id);
     return { success: true, user };
   },
 
@@ -94,10 +106,12 @@ const DB = {
   },
 
   async login(username, password) {
+    console.log('[DB] login attempt:', username);
     const user = await this.findUserByUsername(username);
     if (!user) return { success: false, error: 'ไม่พบ username นี้' };
     if (user.password !== password) return { success: false, error: 'รหัสผ่านไม่ถูกต้อง' };
     this.setCurrentUser(user);
+    console.log('[DB] login OK');
     return { success: true, user };
   },
 
@@ -107,46 +121,48 @@ const DB = {
 
   // ─── Groups ──────────────────────────────────────────
   async getGroups() {
-    const { data, error } = await supabase.from('cl_groups').select('data');
+    const { data, error } = await _sb.from('cl_groups').select('data');
     if (error || !data) return [];
     return data.map(row => row.data);
   },
 
   async getGroupsForUser(userId) {
-    const { data, error } = await supabase
+    // Supabase contains filter on JSONB nested arrays
+    const { data, error } = await _sb
       .from('cl_groups')
-      .select('data')
-      .contains('data', { members: [{ userId }] });
+      .select('data');
 
     if (error || !data) return [];
-    return data.map(row => row.data);
+    // Filter in JS since JSONB contains on nested arrays can be unreliable
+    return data.map(row => row.data).filter(g => g.members && g.members.some(m => m.userId === userId));
   },
 
   async findGroupById(id) {
-    const { data, error } = await supabase
+    const { data, error } = await _sb
       .from('cl_groups')
       .select('data')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     if (error || !data) return null;
     return data.data;
   },
 
   async findGroupByCode(code) {
-    const { data, error } = await supabase
+    const { data, error } = await _sb
       .from('cl_groups')
       .select('data')
       .eq('invite_code', code.toUpperCase())
-      .single();
+      .maybeSingle();
     if (error || !data) return null;
     return data.data;
   },
 
   async updateGroupData(group) {
-    const { error } = await supabase
+    const { error } = await _sb
       .from('cl_groups')
       .update({ data: group })
       .eq('id', group.id);
+    if (error) console.error('[DB] updateGroupData error:', error);
     return !error;
   },
 
@@ -166,13 +182,16 @@ const DB = {
       categories: [],
     };
 
-    const { error } = await supabase.from('cl_groups').insert({
+    const { error } = await _sb.from('cl_groups').insert({
       id: group.id,
       invite_code: group.inviteCode,
       data: group
     });
 
-    if (error) return { success: false, error: 'ไม่สามารถสร้างกลุ่มได้' };
+    if (error) {
+      console.error('[DB] createGroup error:', error);
+      return { success: false, error: 'ไม่สามารถสร้างกลุ่มได้' };
+    }
     return { success: true, group };
   },
 
@@ -213,7 +232,7 @@ const DB = {
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     if (group.ownerId !== userId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่ลบได้' };
 
-    const { error } = await supabase.from('cl_groups').delete().eq('id', groupId);
+    const { error } = await _sb.from('cl_groups').delete().eq('id', groupId);
     if (error) return { success: false, error: 'เกิดข้อผิดพลาดในการลบกลุ่ม' };
     return { success: true };
   },
@@ -383,8 +402,7 @@ const DB = {
     if (group.ownerId !== ownerId) return { success: false, error: 'เฉพาะเจ้าของ' };
 
     group.inviteCode = this.generateInviteCode();
-    // Update both data JSON and the indexed column
-    const { error } = await supabase
+    const { error } = await _sb
       .from('cl_groups')
       .update({ invite_code: group.inviteCode, data: group })
       .eq('id', groupId);

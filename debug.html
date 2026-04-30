@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Debug Supabase</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #111;
+            color: #0f0;
+            padding: 20px;
+        }
+
+        .ok {
+            color: #0f0;
+        }
+
+        .err {
+            color: #f33;
+        }
+
+        .warn {
+            color: #ff0;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>🔍 Debug Supabase Connection</h2>
+    <div id="log"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg, type = 'ok') {
+            logEl.innerHTML += `<div class="${type}"><pre>${msg}</pre></div>`;
+        }
+
+        async function runTests() {
+            // 1. Check if Supabase SDK loaded
+            log('=== Step 1: Check Supabase SDK ===');
+            if (typeof window.supabase === 'undefined') {
+                log('❌ window.supabase is UNDEFINED — CDN failed to load!', 'err');
+                return;
+            }
+            log('✅ window.supabase loaded OK');
+
+            // 2. Try createClient
+            log('\n=== Step 2: Create Client ===');
+            let client;
+            try {
+                const { createClient } = window.supabase;
+                client = createClient(
+                    'https://ejunahjyottlrrhvwfck.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqdW5haGp5b3R0bHJyaHZ3ZmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NDQwOTMsImV4cCI6MjA5MzEyMDA5M30.z5HhHD1i760Q0tHnOLCgX2tYwvL8ujnTpl0HMWaQaRI'
+                );
+                log('✅ createClient() OK');
+            } catch (e) {
+                log('❌ createClient() FAILED: ' + e.message, 'err');
+                return;
+            }
+
+            // 3. Test cl_users table
+            log('\n=== Step 3: Query cl_users table ===');
+            try {
+                const { data, error } = await client.from('cl_users').select('*').limit(1);
+                if (error) {
+                    log('❌ cl_users query error: ' + JSON.stringify(error), 'err');
+                    if (error.message.includes('does not exist') || error.code === '42P01') {
+                        log('⚠️ ตาราง cl_users ยังไม่ถูกสร้าง! ต้องไปรัน SQL ก่อน', 'warn');
+                    }
+                } else {
+                    log('✅ cl_users query OK — found ' + (data ? data.length : 0) + ' rows');
+                    if (data && data.length > 0) log('   data: ' + JSON.stringify(data[0]));
+                }
+            } catch (e) {
+                log('❌ cl_users exception: ' + e.message, 'err');
+            }
+
+            // 4. Test cl_groups table
+            log('\n=== Step 4: Query cl_groups table ===');
+            try {
+                const { data, error } = await client.from('cl_groups').select('*').limit(1);
+                if (error) {
+                    log('❌ cl_groups query error: ' + JSON.stringify(error), 'err');
+                } else {
+                    log('✅ cl_groups query OK — found ' + (data ? data.length : 0) + ' rows');
+                }
+            } catch (e) {
+                log('❌ cl_groups exception: ' + e.message, 'err');
+            }
+
+            // 5. Try inserting a test user
+            log('\n=== Step 5: Test INSERT into cl_users ===');
+            try {
+                const testId = 'debug_' + Date.now();
+                const { data, error } = await client.from('cl_users').insert({
+                    id: testId,
+                    username: 'debug_test_' + Date.now(),
+                    data: { id: testId, username: 'debuguser', test: true }
+                }).select();
+                if (error) {
+                    log('❌ INSERT error: ' + JSON.stringify(error), 'err');
+                    if (error.message && error.message.includes('row-level security')) {
+                        log('⚠️ RLS is enabled! ต้อง DISABLE RLS ก่อน — รัน SQL:\nALTER TABLE cl_users DISABLE ROW LEVEL SECURITY;\nALTER TABLE cl_groups DISABLE ROW LEVEL SECURITY;', 'warn');
+                    }
+                } else {
+                    log('✅ INSERT OK!');
+                    // Clean up
+                    await client.from('cl_users').delete().eq('id', testId);
+                    log('✅ Cleanup OK (deleted test row)');
+                }
+            } catch (e) {
+                log('❌ INSERT exception: ' + e.message, 'err');
+            }
+
+            log('\n=== Done! ===');
+            log('ถ้ามีข้อความ ❌ สีแดง ให้ screenshot ส่งมาให้ได้เลยครับ', 'warn');
+        }
+
+        runTests();
+    </script>
+</body>
+
+</html>
