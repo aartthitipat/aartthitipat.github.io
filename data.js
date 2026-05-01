@@ -112,22 +112,24 @@ const DB = {
 
   // ─── Migration (old → new format) ───────────────────
   migrateGroupIfNeeded(group) {
-    if (!group.members || group.members.length === 0) return { group, migrated: false };
+    if (!group.members || group.members.length === 0) {
+      // กลุ่มใหม่ (ไม่มีสมาชิกเลย) — ไม่ต้อง migrate
+      return { group, migrated: false };
+    }
     const first = group.members[0];
     // ถ้ามี userId แสดงว่าเป็น format เก่า
     if (!('userId' in first)) return { group, migrated: false };
 
     const migrated = {
       ...group,
-      members: group.members
-        .filter(m => m.role !== 'owner')
-        .map(m => ({
-          id: 'anon_' + m.userId,
-          displayName: m.username,
-          isOwner: false,
-          joinedAt: m.joinedAt,
-          progress: {},
-        })),
+      // เก็บ owner ไว้ด้วย (ใช้ userId ตรงๆ เป็น id ของ owner)
+      members: group.members.map(m => ({
+        id: m.role === 'owner' ? m.userId : ('anon_' + m.userId),
+        displayName: m.username,
+        isOwner: m.role === 'owner',
+        joinedAt: m.joinedAt,
+        progress: {},
+      })),
       categories: group.categories.map(cat => ({
         ...cat,
         items: cat.items.map(item => ({
@@ -191,7 +193,13 @@ const DB = {
       ownerId: currentUser.id,
       ownerName: currentUser.username,
       createdAt: new Date().toISOString(),
-      members: [],      // สมาชิก (ไม่รวมเจ้าของ)
+      members: [{
+        id: currentUser.id,
+        displayName: currentUser.username,
+        isOwner: true,
+        joinedAt: new Date().toISOString(),
+        progress: {},
+      }],
       categories: [],
     };
 
@@ -232,6 +240,7 @@ const DB = {
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     const member = group.members.find(m => m.id === memberId);
     if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+    if (member.isOwner) return { success: false, error: 'เจ้าของไม่สามารถออกจากกลุ่มได้' };
 
     group.members = group.members.filter(m => m.id !== memberId);
     const success = await this.updateGroupData(group);
@@ -244,6 +253,8 @@ const DB = {
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     const isAdmin = await this.isAdminId(ownerId);
     if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+    const target = group.members.find(m => m.id === memberId);
+    if (target && target.isOwner) return { success: false, error: 'ไม่สามารถลบเจ้าของได้' };
 
     group.members = group.members.filter(m => m.id !== memberId);
     const success = await this.updateGroupData(group);

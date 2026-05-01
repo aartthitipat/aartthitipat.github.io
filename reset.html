@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Database — CheckGroup</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+    <div style="width:100%; max-width:480px;">
+
+      <div class="card" style="text-align:center; padding:40px 32px; animation: fadeUp 0.3s ease;">
+        <div style="font-size:3.5rem; margin-bottom:16px;">⚠️</div>
+        <h2 style="color:var(--danger); margin-bottom:8px;">รีเซ็ตฐานข้อมูล</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:28px;">
+          การดำเนินการนี้จะลบข้อมูลทั้งหมดอย่างถาวร ไม่สามารถกู้คืนได้
+        </p>
+
+        <!-- Options -->
+        <div style="display:flex; flex-direction:column; gap:12px; text-align:left; margin-bottom:28px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:14px 16px;
+            background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+            transition: border-color 0.15s;">
+            <input type="checkbox" id="chkGroups" checked
+              style="width:18px; height:18px; accent-color:var(--danger); cursor:pointer;" />
+            <div>
+              <div style="font-weight:600;">ลบกลุ่มทั้งหมด</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">ลบ cl_groups ทั้งหมด รวมถึงสมาชิกและ checklist</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:14px 16px;
+            background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+            transition: border-color 0.15s;">
+            <input type="checkbox" id="chkUsers" checked
+              style="width:18px; height:18px; accent-color:var(--danger); cursor:pointer;" />
+            <div>
+              <div style="font-weight:600;">ลบบัญชีผู้ใช้ทั้งหมด</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">ลบ cl_users ทั้งหมด รวมถึง admin</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:14px 16px;
+            background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+            transition: border-color 0.15s;">
+            <input type="checkbox" id="chkLocal" checked
+              style="width:18px; height:18px; accent-color:var(--danger); cursor:pointer;" />
+            <div>
+              <div style="font-weight:600;">ล้าง localStorage</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">ล้าง session ผู้ใช้และ session สมาชิกในเบราว์เซอร์นี้</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Result -->
+        <div id="resultBox" style="display:none; padding:14px 16px; border-radius:var(--radius);
+          font-size:0.88rem; margin-bottom:20px; text-align:left;"></div>
+
+        <!-- Buttons -->
+        <div style="display:flex; gap:10px;">
+          <a href="dashboard.html" class="btn btn--ghost" style="flex:1;">ยกเลิก</a>
+          <button class="btn btn--danger" style="flex:2;" id="resetBtn" onclick="handleReset()">
+            🗑️ รีเซ็ตเดี๋ยวนี้
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://ejunahjyottlrrhvwfck.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqdW5haGp5b3R0bHJyaHZ3ZmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NDQwOTMsImV4cCI6MjA5MzEyMDA5M30.z5HhHD1i760Q0tHnOLCgX2tYwvL8ujnTpl0HMWaQaRI';
+    const { createClient } = window.supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function handleReset() {
+      const doGroups = document.getElementById('chkGroups').checked;
+      const doUsers  = document.getElementById('chkUsers').checked;
+      const doLocal  = document.getElementById('chkLocal').checked;
+
+      if (!doGroups && !doUsers && !doLocal) {
+        showResult('เลือกอย่างน้อย 1 ตัวเลือก', 'error');
+        return;
+      }
+
+      if (!confirm('ยืนยันการรีเซ็ต? ข้อมูลที่ถูกลบไม่สามารถกู้คืนได้')) return;
+
+      const btn = document.getElementById('resetBtn');
+      btn.disabled = true;
+      btn.textContent = 'กำลังรีเซ็ต...';
+
+      const log = [];
+      let hasError = false;
+
+      // ─ ลบ groups ─
+      if (doGroups) {
+        const { error } = await sb.from('cl_groups').delete().neq('id', '___impossible___');
+        if (error) {
+          log.push('❌ ลบ cl_groups ไม่สำเร็จ: ' + error.message);
+          hasError = true;
+        } else {
+          log.push('✅ ลบ cl_groups สำเร็จ');
+        }
+      }
+
+      // ─ ลบ users ─
+      if (doUsers) {
+        const { error } = await sb.from('cl_users').delete().neq('id', '___impossible___');
+        if (error) {
+          log.push('❌ ลบ cl_users ไม่สำเร็จ: ' + error.message);
+          hasError = true;
+        } else {
+          log.push('✅ ลบ cl_users สำเร็จ');
+        }
+      }
+
+      // ─ ล้าง localStorage ─
+      if (doLocal) {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('cl_'));
+        keys.forEach(k => localStorage.removeItem(k));
+        log.push(`✅ ล้าง localStorage แล้ว (${keys.length} key)`);
+      }
+
+      showResult(log.join('<br>'), hasError ? 'error' : 'success');
+
+      if (!hasError) {
+        btn.textContent = '✓ รีเซ็ตสำเร็จ';
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 2000);
+      } else {
+        btn.disabled = false;
+        btn.textContent = '🗑️ รีเซ็ตเดี๋ยวนี้';
+      }
+    }
+
+    function showResult(html, type) {
+      const box = document.getElementById('resultBox');
+      box.innerHTML = html;
+      box.style.display = 'block';
+      box.style.background = type === 'success' ? 'rgba(52,211,153,0.08)' : 'var(--danger-dim)';
+      box.style.border = type === 'success' ? '1px solid rgba(52,211,153,0.25)' : '1px solid rgba(240,82,82,0.2)';
+      box.style.color = type === 'success' ? 'var(--success)' : 'var(--danger)';
+    }
+  </script>
+</body>
+</html>

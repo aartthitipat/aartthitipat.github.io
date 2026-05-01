@@ -235,6 +235,13 @@
         if (group.ownerId === currentUser.id || isAdmin) {
           isOwner = true;
           myMemberId = currentUser.id;
+          // ถ้า owner ยังไม่อยู่ใน members → เพิ่มเข้าไปใน DB
+          myMember = group.members.find(m => m.id === myMemberId);
+          if (!myMember) {
+            myMember = { id: myMemberId, displayName: currentUser.username, isOwner: true, progress: {} };
+            group.members.push(myMember);
+            await DB.updateGroupData(group);
+          }
           document.getElementById('navbar').style.display = '';
           Auth.renderNavbar(currentUser);
           document.getElementById('heroBack').style.display = '';
@@ -270,7 +277,7 @@
 
     async function reloadGroup() {
       group = await DB.findGroupById(groupId);
-      if (myMemberId && !isOwner) {
+      if (myMemberId) {
         myMember = group.members.find(m => m.id === myMemberId) || myMember;
       }
     }
@@ -457,15 +464,22 @@
     }
 
     function renderOwnerCategoryCard(cat, ci) {
-      const itemsHtml = cat.items.map(item => `
-        <div class="checklist-item" style="cursor:default;">
-          <div style="width:20px; height:20px; border-radius:6px; border:2px solid var(--border-light); flex-shrink:0; background:var(--surface-2);"></div>
-          <div class="item-text" style="flex:1;">${escapeHtml(item.text)}</div>
-          <button class="btn btn--danger btn--icon item-delete"
-            style="width:26px; height:26px; font-size:13px; opacity:0;"
-            data-del-item="${item.id}" data-del-cat="${cat.id}" title="ลบรายการ">✕</button>
-        </div>
-      `).join('');
+      const progress = myMember ? (myMember.progress || {}) : {};
+      const itemsHtml = cat.items.map(item => {
+        const checked = !!progress[item.id];
+        return `
+          <div class="checklist-item ${checked ? 'is-checked' : ''}" style="cursor:pointer;"
+            onclick="toggleMyItem('${item.id}')">
+            <input type="checkbox" class="item-checkbox" ${checked ? 'checked' : ''}
+              onclick="event.stopPropagation(); toggleMyItem('${item.id}')" />
+            <div class="item-text" style="flex:1;">${escapeHtml(item.text)}</div>
+            <button class="btn btn--danger btn--icon item-delete"
+              style="width:26px; height:26px; font-size:13px; opacity:0;"
+              data-del-item="${item.id}" data-del-cat="${cat.id}" title="ลบรายการ"
+              onclick="event.stopPropagation();">✕</button>
+          </div>
+        `;
+      }).join('');
 
       return `
         <div class="category-card" style="animation-delay:${ci*0.06}s;">
@@ -705,7 +719,12 @@
       const result = await DB.toggleItem(groupId, myMemberId, itemId);
       if (result.success) {
         await reloadGroup();
-        renderMemberChecklist();
+        if (isOwner) {
+          renderTemplate();
+          renderMembersProgress();
+        } else {
+          renderMemberChecklist();
+        }
         renderHero();
       } else {
         Auth.showToast(result.error, 'error');
