@@ -34,12 +34,12 @@
       <div style="font-size: 28px;">🔑</div>
       <div style="flex:1;">
         <div style="font-weight: 700; margin-bottom: 4px;">เข้าร่วมกลุ่มด้วยโค้ด</div>
-        <div style="font-size: 0.83rem; color: var(--text-muted);">ขอโค้ดเชิญ 6 หลักจากเจ้าของกลุ่ม</div>
+        <div style="font-size: 0.83rem; color: var(--text-muted);">ใส่โค้ด 6 หลักแล้วกรอกชื่อเพื่อเข้ากลุ่ม</div>
       </div>
       <div class="join-box__input-wrap">
         <input class="form-input" type="text" id="joinCode" placeholder="XXXXXX" maxlength="6"
           style="text-transform: uppercase; letter-spacing: 4px; font-family: 'DM Mono', monospace; font-size: 1rem; max-width: 200px;" />
-        <button class="btn btn--secondary" onclick="handleJoin()">เข้าร่วม</button>
+        <button class="btn btn--secondary" onclick="handleJoin()">ค้นหากลุ่ม →</button>
       </div>
     </div>
 
@@ -95,10 +95,21 @@
       const colors = ['#f5a623', '#a78bfa', '#34d399', '#60a5fa', '#f472b6', '#fb923c'];
 
       grid.innerHTML = groups.map((group, i) => {
-        const isOwner = group.ownerId === currentUser.id;
         const stats = DB.getGroupStats(group);
         const color = colors[i % colors.length];
-        const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+
+        // คำนวณ average progress ของสมาชิก
+        let avgPct = 0;
+        if (stats.memberCount > 0 && stats.total > 0) {
+          let totalDone = 0;
+          group.members.forEach(m => {
+            const progress = m.progress || {};
+            group.categories.forEach(cat => {
+              cat.items.forEach(item => { if (progress[item.id]) totalDone++; });
+            });
+          });
+          avgPct = Math.round(totalDone / (stats.memberCount * stats.total) * 100);
+        }
 
         return `
           <a href="group.html?id=${group.id}" class="group-card" style="animation-delay: ${i * 0.06}s;">
@@ -106,11 +117,7 @@
               <div class="group-card__icon" style="background: ${color}22; color: ${color};">
                 ${group.emoji}
               </div>
-              <div>
-                <span class="group-card__badge ${isOwner ? 'badge--owner' : 'badge--member'}">
-                  ${isOwner ? '👑 เจ้าของ' : '👤 สมาชิก'}
-                </span>
-              </div>
+              <span class="group-card__badge badge--owner">👑 เจ้าของ</span>
             </div>
 
             <div>
@@ -118,21 +125,20 @@
               ${group.description ? `<div class="group-card__desc">${escapeHtml(group.description)}</div>` : ''}
             </div>
 
-            <!-- Progress bar -->
-            ${stats.total > 0 ? `
-              <div style="margin-top: 4px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color: var(--text-muted); margin-bottom:6px;">
-                  <span>ความคืบหน้า</span>
-                  <span style="color: ${color}; font-weight:700;">${stats.done}/${stats.total} (${pct}%)</span>
+            ${stats.memberCount > 0 && stats.total > 0 ? `
+              <div style="margin-top:4px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">
+                  <span>เฉลี่ยทุกสมาชิก</span>
+                  <span style="color:${color}; font-weight:700;">${avgPct}%</span>
                 </div>
-                <div style="height:4px; background: var(--surface-3); border-radius:99px; overflow:hidden;">
-                  <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition: width 0.5s ease;"></div>
+                <div style="height:4px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
+                  <div style="height:100%; width:${avgPct}%; background:${color}; border-radius:99px;"></div>
                 </div>
               </div>
             ` : ''}
 
             <div class="group-card__stats">
-              <div class="group-card__stat">👥 ${group.members.length} คน</div>
+              <div class="group-card__stat">👥 ${stats.memberCount} สมาชิก</div>
               <div class="group-card__stat">📂 ${group.categories.length} หมวดหมู่</div>
               <div class="group-card__stat">📝 ${stats.total} รายการ</div>
             </div>
@@ -141,9 +147,9 @@
       }).join('');
     }
 
-    // ── Join group ──
+    // ── Join group ── redirect ไปหน้า group พร้อม code
     async function handleJoin() {
-      const code = document.getElementById('joinCode').value.trim();
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
       if (!code || code.length !== 6) {
         Auth.showToast('กรุณากรอกโค้ด 6 หลัก', 'error');
         return;
@@ -151,19 +157,20 @@
 
       const btn = document.querySelector('.join-box button');
       btn.disabled = true;
-      btn.textContent = 'กำลังโหลด...';
+      btn.textContent = 'กำลังค้นหา...';
 
-      const result = await DB.joinGroup(code, currentUser);
+      const group = await DB.findGroupByCode(code);
 
       btn.disabled = false;
-      btn.textContent = 'เข้าร่วม';
-      if (result.success) {
-        Auth.showToast(`เข้าร่วมกลุ่ม "${result.group.name}" สำเร็จ! 🎉`, 'success');
-        document.getElementById('joinCode').value = '';
-        renderGroups();
-      } else {
-        Auth.showToast(result.error, 'error');
+      btn.textContent = 'ค้นหากลุ่ม →';
+
+      if (!group) {
+        Auth.showToast('ไม่พบโค้ดนี้ กรุณาตรวจสอบอีกครั้ง', 'error');
+        return;
       }
+
+      // Redirect ไปหน้า group พร้อม code ใน URL → จะแสดง overlay ให้กรอกชื่อ
+      window.location.href = `group.html?id=${group.id}&code=${code}`;
     }
 
     // Enter key บน join input

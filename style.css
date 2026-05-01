@@ -913,6 +913,18 @@ a:hover { opacity: 0.8; }
   .auth-card { padding: 28px 20px; }
 }
 
+/* ── Error Screen ── */
+#errorScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+  padding: 24px;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

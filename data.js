@@ -1,5 +1,10 @@
 /**
  * data.js — จัดการข้อมูลทั้งหมดผ่าน Supabase
+ *
+ * Data model ใหม่:
+ *   Group.members = สมาชิกทั่วไป (ไม่รวมเจ้าของ)
+ *   Member = { id, displayName, isOwner:false, joinedAt, progress:{[itemId]:bool} }
+ *   Item = { id, text, createdAt }  ← ไม่มี checked state (อยู่ที่ member.progress แทน)
  */
 
 const SUPABASE_URL = 'https://ejunahjyottlrrhvwfck.supabase.co';
@@ -28,66 +33,41 @@ const DB = {
 
   // ─── Users ───────────────────────────────────────────
   async findUserByUsername(username) {
-    console.log('[DB] findUserByUsername:', username);
     const { data, error } = await _sb
-      .from('cl_users')
-      .select('data')
-      .eq('username', username.toLowerCase())
-      .maybeSingle();
-    if (error) { console.error('[DB] findUserByUsername error:', error); return null; }
-    if (!data) return null;
+      .from('cl_users').select('data')
+      .eq('username', username.toLowerCase()).maybeSingle();
+    if (error || !data) return null;
     return data.data;
   },
 
   async findUserById(id) {
     const { data, error } = await _sb
-      .from('cl_users')
-      .select('data')
-      .eq('id', id)
-      .maybeSingle();
+      .from('cl_users').select('data')
+      .eq('id', id).maybeSingle();
     if (error || !data) return null;
     return data.data;
   },
 
   async createUser({ username, email, password }) {
-    console.log('[DB] createUser:', username, email);
-
     const existingUser = await this.findUserByUsername(username);
-    if (existingUser) {
-      return { success: false, error: 'Username นี้ถูกใช้แล้ว' };
-    }
+    if (existingUser) return { success: false, error: 'Username นี้ถูกใช้แล้ว' };
 
     const { data: emailCheck } = await _sb
-      .from('cl_users')
-      .select('id')
-      .filter('data->>email', 'ilike', email.toLowerCase())
-      .maybeSingle();
-
-    if (emailCheck) {
-      return { success: false, error: 'Email นี้ถูกใช้แล้ว' };
-    }
+      .from('cl_users').select('id')
+      .filter('data->>email', 'ilike', email.toLowerCase()).maybeSingle();
+    if (emailCheck) return { success: false, error: 'Email นี้ถูกใช้แล้ว' };
 
     const id = this.generateId();
     const user = {
-      id,
-      username,
-      email,
-      password,
+      id, username, email, password,
       role: username.toLowerCase() === 'admin' ? 'admin' : 'user',
       createdAt: new Date().toISOString(),
     };
 
     const { error } = await _sb.from('cl_users').insert({
-      id: id,
-      username: username.toLowerCase(),
-      data: user
+      id, username: username.toLowerCase(), data: user
     });
-
-    if (error) {
-      console.error('[DB] createUser insert error:', error);
-      return { success: false, error: 'เกิดข้อผิดพลาดในการสร้างบัญชี: ' + error.message };
-    }
-    console.log('[DB] createUser OK:', id);
+    if (error) return { success: false, error: 'เกิดข้อผิดพลาด: ' + error.message };
     return { success: true, user };
   },
 
@@ -106,12 +86,10 @@ const DB = {
   },
 
   async login(username, password) {
-    console.log('[DB] login attempt:', username);
     const user = await this.findUserByUsername(username);
     if (!user) return { success: false, error: 'ไม่พบ username นี้' };
     if (user.password !== password) return { success: false, error: 'รหัสผ่านไม่ถูกต้อง' };
     this.setCurrentUser(user);
-    console.log('[DB] login OK');
     return { success: true, user };
   },
 
@@ -119,49 +97,86 @@ const DB = {
     localStorage.removeItem(this.KEYS.CURRENT);
   },
 
+  // ─── Anonymous Member Session ────────────────────────
+  getMemberSession(groupId) {
+    return JSON.parse(localStorage.getItem(`cl_join_${groupId}`) || 'null');
+  },
+
+  setMemberSession(groupId, session) {
+    localStorage.setItem(`cl_join_${groupId}`, JSON.stringify(session));
+  },
+
+  clearMemberSession(groupId) {
+    localStorage.removeItem(`cl_join_${groupId}`);
+  },
+
+  // ─── Migration (old → new format) ───────────────────
+  migrateGroupIfNeeded(group) {
+    if (!group.members || group.members.length === 0) return { group, migrated: false };
+    const first = group.members[0];
+    // ถ้ามี userId แสดงว่าเป็น format เก่า
+    if (!('userId' in first)) return { group, migrated: false };
+
+    const migrated = {
+      ...group,
+      members: group.members
+        .filter(m => m.role !== 'owner')
+        .map(m => ({
+          id: 'anon_' + m.userId,
+          displayName: m.username,
+          isOwner: false,
+          joinedAt: m.joinedAt,
+          progress: {},
+        })),
+      categories: group.categories.map(cat => ({
+        ...cat,
+        items: cat.items.map(item => ({
+          id: item.id,
+          text: item.text,
+          createdAt: item.createdAt || new Date().toISOString(),
+        })),
+      })),
+    };
+
+    return { group: migrated, migrated: true };
+  },
+
   // ─── Groups ──────────────────────────────────────────
   async getGroups() {
     const { data, error } = await _sb.from('cl_groups').select('data');
     if (error || !data) return [];
-    return data.map(row => row.data);
+    return data.map(row => this.migrateGroupIfNeeded(row.data).group);
   },
 
   async getGroupsForUser(userId) {
-    // Supabase contains filter on JSONB nested arrays
-    const { data, error } = await _sb
-      .from('cl_groups')
-      .select('data');
-
+    const { data, error } = await _sb.from('cl_groups').select('data');
     if (error || !data) return [];
-    // Filter in JS since JSONB contains on nested arrays can be unreliable
-    return data.map(row => row.data).filter(g => g.members && g.members.some(m => m.userId === userId));
+    return data.map(row => this.migrateGroupIfNeeded(row.data).group)
+      .filter(g => g.ownerId === userId);
   },
 
   async findGroupById(id) {
     const { data, error } = await _sb
-      .from('cl_groups')
-      .select('data')
-      .eq('id', id)
-      .maybeSingle();
+      .from('cl_groups').select('data').eq('id', id).maybeSingle();
     if (error || !data) return null;
-    return data.data;
+    const { group, migrated } = this.migrateGroupIfNeeded(data.data);
+    if (migrated) await this.updateGroupData(group);
+    return group;
   },
 
   async findGroupByCode(code) {
     const { data, error } = await _sb
-      .from('cl_groups')
-      .select('data')
-      .eq('invite_code', code.toUpperCase())
-      .maybeSingle();
+      .from('cl_groups').select('data')
+      .eq('invite_code', code.toUpperCase()).maybeSingle();
     if (error || !data) return null;
-    return data.data;
+    const { group, migrated } = this.migrateGroupIfNeeded(data.data);
+    if (migrated) await this.updateGroupData(group);
+    return group;
   },
 
   async updateGroupData(group) {
     const { error } = await _sb
-      .from('cl_groups')
-      .update({ data: group })
-      .eq('id', group.id);
+      .from('cl_groups').update({ data: group }).eq('id', group.id);
     if (error) console.error('[DB] updateGroupData error:', error);
     return !error;
   },
@@ -176,9 +191,7 @@ const DB = {
       ownerId: currentUser.id,
       ownerName: currentUser.username,
       createdAt: new Date().toISOString(),
-      members: [
-        { userId: currentUser.id, username: currentUser.username, role: 'owner', canEdit: true, joinedAt: new Date().toISOString() }
-      ],
+      members: [],      // สมาชิก (ไม่รวมเจ้าของ)
       categories: [],
     };
 
@@ -195,33 +208,44 @@ const DB = {
     return { success: true, group };
   },
 
-  async joinGroup(code, currentUser) {
-    const group = await this.findGroupByCode(code);
-    if (!group) return { success: false, error: 'ไม่พบโค้ดนี้ กรุณาตรวจสอบอีกครั้ง' };
+  // เข้าร่วมกลุ่มแบบไม่ต้องลงทะเบียน — ใส่แค่ชื่อ
+  async joinGroupAnonymous(groupId, displayName) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
 
-    if (group.members.some(m => m.userId === currentUser.id)) {
-      return { success: false, error: 'คุณเป็นสมาชิกกลุ่มนี้อยู่แล้ว' };
-    }
+    const memberId = 'anon_' + this.generateId();
     group.members.push({
-      userId: currentUser.id,
-      username: currentUser.username,
-      role: 'member',
-      canEdit: false,
+      id: memberId,
+      displayName: displayName.trim(),
+      isOwner: false,
       joinedAt: new Date().toISOString(),
+      progress: {},
     });
 
     const success = await this.updateGroupData(group);
-    if (!success) return { success: false, error: 'ไม่สามารถเข้าร่วมกลุ่มได้' };
-    return { success: true, group };
+    if (!success) return { success: false, error: 'ไม่สามารถเข้าร่วมได้' };
+    return { success: true, memberId, displayName: displayName.trim() };
   },
 
-  async leaveGroup(groupId, userId) {
+  async leaveGroup(groupId, memberId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId === userId) return { success: false, error: 'เจ้าของกลุ่มไม่สามารถออกได้ (ต้องลบกลุ่มแทน)' };
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
 
-    group.members = group.members.filter(m => m.userId !== userId);
+    group.members = group.members.filter(m => m.id !== memberId);
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
+  },
 
+  async removeMember(groupId, ownerId, memberId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+    const isAdmin = await this.isAdminId(ownerId);
+    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+
+    group.members = group.members.filter(m => m.id !== memberId);
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true };
@@ -243,7 +267,7 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     const isAdmin = await this.isAdminId(userId);
-    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
 
     const category = {
       id: this.generateId(),
@@ -263,25 +287,18 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     const isAdmin = await this.isAdminId(userId);
-    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+
+    // ลบ progress ของทุกสมาชิกสำหรับ items ในหมวดนี้
+    const cat = group.categories.find(c => c.id === categoryId);
+    if (cat) {
+      const itemIds = cat.items.map(i => i.id);
+      group.members.forEach(m => {
+        if (m.progress) itemIds.forEach(id => delete m.progress[id]);
+      });
+    }
 
     group.categories = group.categories.filter(c => c.id !== categoryId);
-
-    const success = await this.updateGroupData(group);
-    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
-    return { success: true };
-  },
-
-  async renameCategory(groupId, userId, categoryId, newName) {
-    const group = await this.findGroupById(groupId);
-    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    const isAdmin = await this.isAdminId(userId);
-    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
-
-    const cat = group.categories.find(c => c.id === categoryId);
-    if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
-    cat.name = newName;
-
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true };
@@ -291,10 +308,8 @@ const DB = {
   async addItem(groupId, userId, categoryId, text) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-
     const isAdmin = await this.isAdminId(userId);
-    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
-    if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์เพิ่มรายการ' };
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
 
     const cat = group.categories.find(c => c.id === categoryId);
     if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
@@ -302,9 +317,6 @@ const DB = {
     const item = {
       id: this.generateId(),
       text,
-      checked: false,
-      checkedBy: null,
-      checkedByName: null,
       createdAt: new Date().toISOString(),
     };
     cat.items.push(item);
@@ -317,98 +329,76 @@ const DB = {
   async deleteItem(groupId, userId, categoryId, itemId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-
     const isAdmin = await this.isAdminId(userId);
-    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
-    if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์ลบรายการ' };
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
 
     const cat = group.categories.find(c => c.id === categoryId);
     if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
-    cat.items = cat.items.filter(i => i.id !== itemId);
 
-    const success = await this.updateGroupData(group);
-    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
-    return { success: true };
-  },
-
-  async toggleItem(groupId, userId, categoryId, itemId) {
-    const group = await this.findGroupById(groupId);
-    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-
-    const isAdmin = await this.isAdminId(userId);
-    if (!isAdmin && !group.members.some(m => m.userId === userId)) {
-      return { success: false, error: 'คุณไม่ได้อยู่ในกลุ่มนี้' };
-    }
-
-    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
-    if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์แก้ไขรายการได้ (เป็นผู้ชม)' };
-
-    const cat = group.categories.find(c => c.id === categoryId);
-    if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
-    const item = cat.items.find(i => i.id === itemId);
-    if (!item) return { success: false, error: 'ไม่พบรายการ' };
-
-    item.checked = !item.checked;
-    item.checkedBy = item.checked ? userId : null;
-    item.checkedByName = item.checked
-      ? (group.members.find(m => m.userId === userId)?.username || '?')
-      : null;
-
-    const success = await this.updateGroupData(group);
-    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
-    return { success: true, item };
-  },
-
-  async resetChecklist(groupId, userId) {
-    const group = await this.findGroupById(groupId);
-    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-
-    const isAdmin = await this.isAdminId(userId);
-    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
-    if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์รีเซ็ตรายการได้' };
-
-    group.categories.forEach(c => {
-      c.items.forEach(i => {
-        i.checked = false;
-        i.checkedBy = null;
-        i.checkedByName = null;
-      });
+    // ลบ progress ของทุกสมาชิกสำหรับ item นี้
+    group.members.forEach(m => {
+      if (m.progress) delete m.progress[itemId];
     });
 
+    cat.items = cat.items.filter(i => i.id !== itemId);
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true };
   },
 
-  async toggleMemberEdit(groupId, ownerId, targetUserId) {
+  // toggle item ของสมาชิกคนเดียว (ไม่กระทบคนอื่น)
+  async toggleItem(groupId, memberId, itemId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    const isAdmin = await this.isAdminId(ownerId);
-    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการสิทธิ์ได้' };
 
-    const member = group.members.find(m => m.userId === targetUserId);
+    const member = group.members.find(m => m.id === memberId);
     if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
-    if (member.role === 'owner') return { success: false, error: 'ไม่สามารถเปลี่ยนสิทธิ์เจ้าของได้' };
 
-    member.canEdit = !member.canEdit;
+    if (!member.progress) member.progress = {};
+    member.progress[itemId] = !member.progress[itemId];
 
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
-    return { success: true, canEdit: member.canEdit };
+    return { success: true, checked: member.progress[itemId] };
+  },
+
+  async resetMemberProgress(groupId, memberId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+
+    member.progress = {};
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
+  },
+
+  // สถิติของสมาชิกคนเดียว
+  getMemberStats(group, memberId) {
+    const member = group.members.find(m => m.id === memberId);
+    const progress = member?.progress || {};
+    let total = 0, done = 0;
+    group.categories.forEach(cat => {
+      cat.items.forEach(item => {
+        total++;
+        if (progress[item.id]) done++;
+      });
+    });
+    return { total, done };
+  },
+
+  // สถิติ template (จำนวน items ทั้งหมด + จำนวนสมาชิก)
+  getGroupStats(group) {
+    let total = 0;
+    group.categories.forEach(c => { total += c.items.length; });
+    return { total, memberCount: group.members.length };
   },
 
   async isAdminId(userId) {
     const user = await this.findUserById(userId);
     return user && (user.role === 'admin' || user.username.toLowerCase() === 'admin');
-  },
-
-  getGroupStats(group) {
-    let total = 0, done = 0;
-    group.categories.forEach(c => {
-      total += c.items.length;
-      done += c.items.filter(i => i.checked).length;
-    });
-    return { total, done };
   },
 
   async regenerateInviteCode(groupId, ownerId) {
@@ -425,5 +415,5 @@ const DB = {
 
     if (error) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true, code: group.inviteCode };
-  }
+  },
 };

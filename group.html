@@ -10,51 +10,133 @@
 
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar" id="navbar"></nav>
+  <!-- ── Navbar (เจ้าของที่ login แล้ว) ── -->
+  <nav class="navbar" id="navbar" style="display:none;"></nav>
 
-  <!-- ── Group Hero ── -->
-  <div class="group-hero" id="groupHero" style="position:relative; z-index:1;">
-    <div style="max-width: 1200px; margin: 0 auto;">
-      <a href="dashboard.html" class="group-hero__back">← กลับ Dashboard</a>
+  <!-- ── Join Overlay ── -->
+  <div id="joinOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:500; overflow-y:auto;">
+    <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px;">
+      <div style="width:100%; max-width:420px; animation: fadeUp 0.4s ease;">
+        <div class="card" style="text-align:center; padding: 40px 32px;">
+          <div id="joinGroupEmoji" style="font-size:3.5rem; margin-bottom:12px;">📋</div>
+          <p style="font-size:0.82rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">คุณถูกเชิญเข้ากลุ่ม</p>
+          <h2 id="joinGroupName" style="font-size:1.6rem; margin-bottom:8px;">กำลังโหลด...</h2>
+          <p id="joinGroupDesc" style="color:var(--text-muted); font-size:0.88rem; margin-bottom:28px; min-height:20px;"></p>
 
-      <div class="group-hero__top">
-        <!-- Left: Title & meta -->
-        <div>
-          <div class="group-hero__title-row">
-            <div class="group-hero__icon" id="heroIcon">📋</div>
-            <div>
-              <h1 class="group-hero__name" id="heroName">กำลังโหลด...</h1>
-              <div class="group-hero__meta" id="heroMeta"></div>
+          <div style="text-align:left; display:flex; flex-direction:column; gap:16px;">
+            <div class="form-group">
+              <label class="form-label">ชื่อของคุณ</label>
+              <input class="form-input" type="text" id="joinName"
+                placeholder="ใส่ชื่อที่ต้องการให้แสดง..." maxlength="40"
+                style="font-size:1rem;" />
+              <span class="form-error" id="joinNameError" style="display:none;"></span>
             </div>
+
+            <div class="form-group" id="joinCodeWrap" style="display:none;">
+              <label class="form-label">โค้ดเชิญ</label>
+              <input class="form-input" type="text" id="joinCodeInput"
+                placeholder="XXXXXX" maxlength="6"
+                style="text-transform:uppercase; letter-spacing:4px; font-family:'DM Mono',monospace; font-size:1rem;" />
+              <span class="form-error" id="joinCodeError" style="display:none;"></span>
+            </div>
+
+            <button class="btn btn--primary btn--lg btn--full" id="joinBtn" onclick="handleJoin()">
+              เข้าร่วมกลุ่ม →
+            </button>
+
+            <p style="text-align:center; font-size:0.8rem; color:var(--text-dim);">
+              ชื่อนี้จะแสดงให้หัวหน้ากลุ่มเห็น
+            </p>
           </div>
         </div>
-
-        <!-- Right: Invite code (owner only) + Actions -->
-        <div id="heroRight" style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Role notice ── -->
-  <div style="max-width: 1200px; margin: 24px auto 0; padding: 0 32px;" id="roleNoticeWrap"></div>
-
-  <!-- ── Members Panel ── -->
-  <div style="max-width: 1200px; margin: 16px auto 0; padding: 0 32px;" id="membersPanelWrap"></div>
-
-  <!-- ── Checklist Area ── -->
-  <div class="checklist-area">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <h3
-        style="font-size: 1rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-        📂 หมวดหมู่ทั้งหมด <span id="catCount" style="color: var(--accent);"></span>
-      </h3>
-      <div id="statsRow" style="font-size:0.85rem; color: var(--text-muted);"></div>
-    </div>
-    <div class="checklist-grid" id="checklistGrid">
-      <div style="text-align:center; padding: 60px; color: var(--text-muted);">กำลังโหลด...</div>
-    </div>
+  <!-- ── Error Screen ── -->
+  <div id="errorScreen" style="display:none; min-height:100vh; display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px; text-align:center; padding:24px;">
+    <div style="font-size:4rem;">🔒</div>
+    <h2 id="errorTitle">ไม่พบกลุ่ม</h2>
+    <p id="errorMsg" style="color:var(--text-muted);">ลิงก์ไม่ถูกต้องหรือกลุ่มถูกลบแล้ว</p>
+    <a href="dashboard.html" class="btn btn--ghost">กลับหน้าหลัก</a>
   </div>
+
+  <!-- ── Main Content ── -->
+  <div id="mainContent" style="display:none;">
+
+    <!-- Hero -->
+    <div class="group-hero" id="groupHero" style="position:relative; z-index:1;">
+      <div style="max-width:1200px; margin:0 auto;">
+        <a href="dashboard.html" class="group-hero__back" id="heroBack" style="display:none;">← กลับ Dashboard</a>
+
+        <div class="group-hero__top">
+          <div>
+            <div class="group-hero__title-row">
+              <div class="group-hero__icon" id="heroIcon">📋</div>
+              <div>
+                <h1 class="group-hero__name" id="heroName"></h1>
+                <div class="group-hero__meta" id="heroMeta"></div>
+              </div>
+            </div>
+          </div>
+          <div id="heroRight" style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Owner View ── -->
+    <div id="ownerView" style="display:none;">
+
+      <!-- Template Management -->
+      <div class="checklist-area">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+          <h3 style="font-size:1rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+            📝 รายการเช็คลิส <span id="catCount" style="color:var(--accent);"></span>
+          </h3>
+          <button class="btn btn--primary btn--sm" onclick="openModal('modalAddCat')">+ เพิ่มหมวดหมู่</button>
+        </div>
+
+        <div class="checklist-grid" id="templateGrid"></div>
+      </div>
+
+      <!-- Members Progress -->
+      <div style="max-width:1200px; margin:0 auto; padding:0 32px 48px;">
+        <h3 style="font-size:1rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">
+          👥 ความคืบหน้าสมาชิก <span id="memberCount" style="color:var(--accent);"></span>
+        </h3>
+        <div id="membersProgressList"></div>
+      </div>
+    </div>
+
+    <!-- ── Member View ── -->
+    <div id="memberView" style="display:none;">
+
+      <!-- Member Progress Header -->
+      <div style="max-width:800px; margin:24px auto 0; padding:0 24px;">
+        <div class="card" style="padding:24px 28px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:4px;">สวัสดี!</p>
+              <h2 id="memberGreetName" style="font-size:1.4rem;"></h2>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost btn--sm" onclick="handleReset()">🔄 รีเซ็ต</button>
+              <button class="btn btn--danger btn--sm" onclick="handleLeave()">🚪 ออกจากกลุ่ม</button>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div id="memberProgressBar"></div>
+        </div>
+      </div>
+
+      <!-- Personal Checklist -->
+      <div style="max-width:800px; margin:20px auto 48px; padding:0 24px;">
+        <div id="memberChecklist"></div>
+      </div>
+    </div>
+
+  </div><!-- /mainContent -->
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
@@ -69,8 +151,8 @@
       <div class="modal__body">
         <div class="form-group">
           <label class="form-label">ชื่อหมวดหมู่</label>
-          <input class="form-input" type="text" id="newCatName" placeholder="เช่น อาหาร, เสื้อผ้า, อุปกรณ์..."
-            maxlength="40" />
+          <input class="form-input" type="text" id="newCatName"
+            placeholder="เช่น อาหาร, เสื้อผ้า, อุปกรณ์..." maxlength="40" />
           <span class="form-error" id="catNameError" style="display:none;"></span>
         </div>
         <div class="form-group">
@@ -86,16 +168,16 @@
     </div>
   </div>
 
-  <!-- ── Modal: Confirm Delete Category ── -->
+  <!-- ── Modal: Delete Category ── -->
   <div class="modal-overlay" id="modalDelCat" style="display:none;">
     <div class="modal">
       <div class="modal__header">
-        <h3 style="color: var(--danger);">🗑️ ลบหมวดหมู่?</h3>
+        <h3 style="color:var(--danger);">🗑️ ลบหมวดหมู่?</h3>
         <button class="modal__close" onclick="closeModal('modalDelCat')">✕</button>
       </div>
-      <p style="color: var(--text-muted); font-size:0.9rem; margin-bottom: 8px;">
-        ต้องการลบหมวดหมู่ "<strong id="delCatName"></strong>" ใช่ไหม?
-        <br /><span style="color: var(--danger); font-size:0.82rem;">รายการทั้งหมดในหมวดนี้จะถูกลบด้วย</span>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:8px;">
+        ต้องการลบหมวดหมู่ "<strong id="delCatName"></strong>" ใช่ไหม?<br />
+        <span style="color:var(--danger); font-size:0.82rem;">รายการและ progress ของสมาชิกทั้งหมดในหมวดนี้จะถูกลบด้วย</span>
       </p>
       <div class="modal__footer">
         <button class="btn btn--ghost" onclick="closeModal('modalDelCat')">ยกเลิก</button>
@@ -108,11 +190,11 @@
   <div class="modal-overlay" id="modalDelGroup" style="display:none;">
     <div class="modal">
       <div class="modal__header">
-        <h3 style="color: var(--danger);">⚠️ ลบกลุ่ม?</h3>
+        <h3 style="color:var(--danger);">⚠️ ลบกลุ่ม?</h3>
         <button class="modal__close" onclick="closeModal('modalDelGroup')">✕</button>
       </div>
-      <p style="color: var(--text-muted); font-size:0.9rem; margin-bottom: 8px;">
-        ต้องการลบกลุ่มนี้ถาวรใช่ไหม? <strong style="color:var(--danger)">ไม่สามารถกู้คืนได้</strong>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:8px;">
+        ต้องการลบกลุ่มนี้ถาวรใช่ไหม? <strong style="color:var(--danger);">ไม่สามารถกู้คืนได้</strong>
       </p>
       <div class="modal__footer">
         <button class="btn btn--ghost" onclick="closeModal('modalDelGroup')">ยกเลิก</button>
@@ -121,74 +203,176 @@
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="data.js"></script>
   <script src="auth.js"></script>
   <script>
-    // ── State ──────────────────────────────────────────────
-    const currentUser = Auth.requireLogin();
-    Auth.renderNavbar(currentUser);
-
+    // ── State ────────────────────────────────────────────────
     const params = new URLSearchParams(window.location.search);
     const groupId = params.get('id');
+    const codeFromUrl = (params.get('code') || '').toUpperCase();
 
     let group = null;
     let isOwner = false;
-    let canEditChecklist = false;
+    let myMemberId = null;
+    let myMember = null;
     let pendingDelCatId = null;
 
-    // ── Color options ──
-    const COLORS = ['#f5a623', '#a78bfa', '#34d399', '#60a5fa', '#f472b6', '#fb923c', '#f43f5e', '#06b6d4', '#84cc16', '#eab308'];
+    const COLORS = ['#f5a623','#a78bfa','#34d399','#60a5fa','#f472b6','#fb923c','#f43f5e','#06b6d4','#84cc16','#eab308'];
 
-    // ── Init ───────────────────────────────────────────────
+    // ── Init ─────────────────────────────────────────────────
     async function init() {
-      if (!groupId) { window.location.href = 'dashboard.html'; return; }
+      if (!groupId) { showError('ไม่พบกลุ่ม', 'URL ไม่ถูกต้อง'); return; }
 
       group = await DB.findGroupById(groupId);
-      if (!group) { window.location.href = 'dashboard.html'; return; }
+      if (!group) { showError('ไม่พบกลุ่มนี้', 'อาจถูกลบแล้ว หรือ URL ไม่ถูกต้อง'); return; }
 
-      // เช็คว่า user อยู่ในกลุ่มไหม (หรือเป็น admin)
-      const isAdmin = Auth.isAdmin(currentUser);
-      const member = group.members.find(m => m.userId === currentUser.id);
-      if (!member && !isAdmin) { window.location.href = 'dashboard.html'; return; }
+      const currentUser = DB.getCurrentUser();
 
-      isOwner = (group.ownerId === currentUser.id) || isAdmin;
-      canEditChecklist = isOwner || (member && member.canEdit);
+      // ─ เจ้าของที่ login แล้ว
+      if (currentUser) {
+        const isAdmin = Auth.isAdmin(currentUser);
+        if (group.ownerId === currentUser.id || isAdmin) {
+          isOwner = true;
+          myMemberId = currentUser.id;
+          document.getElementById('navbar').style.display = '';
+          Auth.renderNavbar(currentUser);
+          document.getElementById('heroBack').style.display = '';
+          showMainContent();
+          renderOwnerView();
+          return;
+        }
+      }
 
-      renderHero();
-      renderRoleNotice();
-      renderMembers();
-      renderChecklist();
-      setupCatColorPicker();
+      // ─ สมาชิกที่เคยเข้าร่วมแล้ว (เช็ค localStorage)
+      const session = DB.getMemberSession(groupId);
+      if (session) {
+        const member = group.members.find(m => m.id === session.memberId);
+        if (member) {
+          myMemberId = session.memberId;
+          myMember = member;
+          showMainContent();
+          renderMemberView();
+          return;
+        }
+        // session ล้าสมัย → ลบทิ้ง
+        DB.clearMemberSession(groupId);
+      }
+
+      // ─ ยังไม่ได้เข้าร่วม → แสดง Join Overlay
+      showJoinOverlay();
     }
 
-    // ── Helpers ────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────
     function escapeHtml(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     async function reloadGroup() {
       group = await DB.findGroupById(groupId);
+      if (myMemberId && !isOwner) {
+        myMember = group.members.find(m => m.id === myMemberId) || myMember;
+      }
     }
 
-    // ── Hero ───────────────────────────────────────────────
+    function showError(title, msg) {
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMsg').textContent = msg;
+      document.getElementById('errorScreen').style.display = 'flex';
+    }
+
+    function showJoinOverlay() {
+      document.getElementById('joinGroupEmoji').textContent = group.emoji;
+      document.getElementById('joinGroupName').textContent = group.name;
+      document.getElementById('joinGroupDesc').textContent = group.description || '';
+
+      // ถ้าไม่มี code ใน URL ให้แสดงช่องกรอก code เพิ่ม
+      if (!codeFromUrl || codeFromUrl !== group.inviteCode) {
+        document.getElementById('joinCodeWrap').style.display = '';
+      }
+
+      document.getElementById('joinOverlay').style.display = '';
+      setTimeout(() => document.getElementById('joinName').focus(), 200);
+    }
+
+    function showMainContent() {
+      document.getElementById('joinOverlay').style.display = 'none';
+      document.getElementById('mainContent').style.display = '';
+      renderHero();
+    }
+
+    // ── Join ─────────────────────────────────────────────────
+    async function handleJoin() {
+      const name = document.getElementById('joinName').value.trim();
+      const nameErr = document.getElementById('joinNameError');
+      const codeWrap = document.getElementById('joinCodeWrap');
+      const codeInput = document.getElementById('joinCodeInput');
+      const codeErr = document.getElementById('joinCodeError');
+
+      nameErr.style.display = 'none';
+      if (codeErr) codeErr.style.display = 'none';
+
+      if (!name) {
+        nameErr.textContent = 'กรุณาใส่ชื่อของคุณ';
+        nameErr.style.display = 'flex';
+        document.getElementById('joinName').focus();
+        return;
+      }
+
+      // ตรวจสอบ code
+      let verifiedCode = codeFromUrl;
+      if (codeWrap.style.display !== 'none') {
+        verifiedCode = codeInput.value.trim().toUpperCase();
+        if (!verifiedCode || verifiedCode.length !== 6) {
+          codeErr.textContent = 'กรุณากรอกโค้ดเชิญ 6 หลัก';
+          codeErr.style.display = 'flex';
+          return;
+        }
+        if (verifiedCode !== group.inviteCode) {
+          codeErr.textContent = 'โค้ดเชิญไม่ถูกต้อง';
+          codeErr.style.display = 'flex';
+          return;
+        }
+      } else if (codeFromUrl !== group.inviteCode) {
+        showError('โค้ดเชิญไม่ถูกต้อง', 'ขอโค้ดใหม่จากเจ้าของกลุ่ม');
+        return;
+      }
+
+      const btn = document.getElementById('joinBtn');
+      btn.disabled = true;
+      btn.textContent = 'กำลังเข้าร่วม...';
+
+      const result = await DB.joinGroupAnonymous(groupId, name);
+      if (result.success) {
+        DB.setMemberSession(groupId, { memberId: result.memberId, displayName: result.displayName });
+        myMemberId = result.memberId;
+
+        group = await DB.findGroupById(groupId);
+        myMember = group.members.find(m => m.id === myMemberId);
+
+        showMainContent();
+        renderMemberView();
+      } else {
+        Auth.showToast(result.error, 'error');
+        btn.disabled = false;
+        btn.textContent = 'เข้าร่วมกลุ่ม →';
+      }
+    }
+
+    // ── Hero ─────────────────────────────────────────────────
     function renderHero() {
       document.title = `${group.name} — CheckGroup`;
       document.getElementById('heroIcon').textContent = group.emoji;
       document.getElementById('heroName').textContent = group.name;
 
       const stats = DB.getGroupStats(group);
-      const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-
       document.getElementById('heroMeta').innerHTML = `
-        <div class="group-hero__chip">👥 ${group.members.length} สมาชิก</div>
+        <div class="group-hero__chip">👥 ${stats.memberCount} สมาชิก</div>
         <div class="group-hero__chip">📂 ${group.categories.length} หมวดหมู่</div>
-        <div class="group-hero__chip">✅ ${stats.done}/${stats.total} รายการ (${pct}%)</div>
-        ${group.description ? `<div class="group-hero__chip" style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(group.description)}</div>` : ''}
+        <div class="group-hero__chip">📝 ${stats.total} รายการ</div>
+        ${group.description ? `<div class="group-hero__chip">${escapeHtml(group.description)}</div>` : ''}
       `;
 
-      // Right panel
       const right = document.getElementById('heroRight');
       if (isOwner) {
         right.innerHTML = `
@@ -197,303 +381,365 @@
               <div class="invite-code__label">🔑 โค้ดเชิญ</div>
               <div class="invite-code__value" id="inviteCodeDisplay">${group.inviteCode}</div>
             </div>
-            <button class="btn btn--ghost btn--sm" onclick="copyCode()" title="คัดลอกโค้ด">📋</button>
+            <button class="btn btn--ghost btn--sm" onclick="copyInviteLink()" title="คัดลอกลิงก์เชิญ">🔗</button>
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn--ghost btn--sm" onclick="regenerateCode()">🔄 โค้ดใหม่</button>
             <button class="btn btn--danger btn--sm" onclick="openModal('modalDelGroup')">🗑️ ลบกลุ่ม</button>
           </div>
         `;
-      } else {
+      } else if (myMember) {
         right.innerHTML = `
-          <button class="btn btn--ghost btn--sm" onclick="handleLeave()">🚪 ออกจากกลุ่ม</button>
+          <div style="font-size:0.85rem; color:var(--text-muted);">เข้าสู่กลุ่มในฐานะ</div>
+          <div style="font-weight:700; font-size:1.1rem;">${escapeHtml(myMember.displayName)}</div>
         `;
       }
     }
 
-    function copyCode() {
-      const code = group.inviteCode;
-      navigator.clipboard.writeText(code).then(() => {
-        Auth.showToast('คัดลอกโค้ด ' + code + ' แล้ว!', 'success');
+    function copyInviteLink() {
+      const link = `${location.origin}${location.pathname}?id=${groupId}&code=${group.inviteCode}`;
+      navigator.clipboard.writeText(link).then(() => {
+        Auth.showToast('คัดลอกลิงก์เชิญแล้ว!', 'success');
       }).catch(() => {
-        Auth.showToast('โค้ด: ' + code, '');
+        Auth.showToast('โค้ด: ' + group.inviteCode, '');
       });
     }
 
     async function regenerateCode() {
-      const groups = await DB.getGroups();
-      const g = groups.find(x => x.id === groupId);
-      if (g) {
-        const result = await DB.regenerateInviteCode(groupId, currentUser.id);
-        if (result.success) {
-          group.inviteCode = result.code;
-          document.getElementById('inviteCodeDisplay').textContent = result.code;
-          Auth.showToast('สร้างโค้ดใหม่แล้ว: ' + result.code, 'success');
-        } else {
-          Auth.showToast(result.error, 'error');
-        }
+      const result = await DB.regenerateInviteCode(groupId, DB.getCurrentUser().id);
+      if (result.success) {
+        group.inviteCode = result.code;
+        document.getElementById('inviteCodeDisplay').textContent = result.code;
+        Auth.showToast('สร้างโค้ดใหม่แล้ว: ' + result.code, 'success');
+      } else {
+        Auth.showToast(result.error, 'error');
       }
     }
 
-    // ── Role Notice ────────────────────────────────────────
-    function renderRoleNotice() {
-      const wrap = document.getElementById('roleNoticeWrap');
-      if (isOwner) {
-        wrap.innerHTML = `
-          <div class="role-notice role-notice--owner">
-            👑 คุณเป็น <strong>เจ้าของกลุ่ม</strong> — สามารถจัดการสิทธิ์ เพิ่ม/ลบหมวดหมู่และรายการได้
+    // ── Owner View ───────────────────────────────────────────
+    function renderOwnerView() {
+      document.getElementById('ownerView').style.display = '';
+      document.getElementById('memberView').style.display = 'none';
+      renderTemplate();
+      renderMembersProgress();
+      setupCatColorPicker();
+    }
+
+    function renderTemplate() {
+      const stats = DB.getGroupStats(group);
+      document.getElementById('catCount').textContent = `(${group.categories.length})`;
+
+      let html = group.categories.map((cat, ci) => renderOwnerCategoryCard(cat, ci)).join('');
+
+      html += `
+        <div class="add-category-card" onclick="openModal('modalAddCat')">
+          <div class="add-category-card__icon">📂</div>
+          <div>+ เพิ่มหมวดหมู่</div>
+        </div>
+      `;
+
+      if (group.categories.length === 0) {
+        document.getElementById('templateGrid').innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-state__icon">📋</div>
+            <h3>ยังไม่มีรายการ</h3>
+            <p>เพิ่มหมวดหมู่เพื่อเริ่มสร้างเช็คลิส</p>
           </div>
-        `;
-      } else if (canEditChecklist) {
-        wrap.innerHTML = `
-          <div class="role-notice role-notice--owner" style="background: var(--accent-dim); border-color: rgba(245,166,35,0.3);">
-            ✏️ คุณมีสิทธิ์ <strong>แก้ไข</strong> — สามารถติ๊กรายการ และจัดการรายการได้
+          <div class="add-category-card" onclick="openModal('modalAddCat')" style="min-height:80px;">
+            <div class="add-category-card__icon">📂</div>
+            <div>+ เพิ่มหมวดหมู่แรก</div>
           </div>
         `;
       } else {
-        wrap.innerHTML = `
-          <div class="role-notice role-notice--member">
-            👤 คุณเป็น <strong>ผู้ชม</strong> — ยืนดูได้อย่างเดียวเท่านั้น
-          </div>
-        `;
+        document.getElementById('templateGrid').innerHTML = html;
+        attachOwnerItemEvents();
       }
     }
 
-    // ── Members ────────────────────────────────────────────
-    function renderMembers() {
-      const wrap = document.getElementById('membersPanelWrap');
-      const chips = group.members.map(m => {
-        const initial = m.username.charAt(0).toUpperCase();
-        const isThisOwner = m.userId === group.ownerId;
-        return `
-          <div class="member-chip" title="${m.username}${isThisOwner ? ' (เจ้าของ)' : ''}">
-            <div class="member-avatar ${isThisOwner ? 'member-avatar--owner' : ''}">${initial}</div>
-            <span>${escapeHtml(m.username)}</span>
-            ${isThisOwner ? '<span style="font-size:0.7rem; color:var(--accent);">👑</span>' : ''}
-            ${!isThisOwner ? `<span style="font-size:0.7rem; color:var(--text-muted); margin-left:4px;">${m.canEdit ? '✏️ แก้ไขได้' : '👁️ ผู้ชม'}</span>` : ''}
-            ${isOwner && !isThisOwner ? `
-              <button class="btn btn--ghost" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 4px; border: none; background: var(--surface-3);" onclick="toggleEdit('${m.userId}')" title="เปลี่ยนสิทธิ์">🔄</button>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-
-      wrap.innerHTML = `
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px;">
-          <div style="display:flex; align-items:center; justify-content:space-between;">
-            <div style="font-size:0.85rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-              👥 สมาชิก (${group.members.length})
-            </div>
-          </div>
-          <div class="members-grid">${chips}</div>
-        </div>
-      `;
-    }
-
-    // ── Color picker for modal ─────────────────────────────
-    function setupCatColorPicker() {
-      const picker = document.getElementById('catColorPicker');
-      COLORS.forEach((c, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'color-dot' + (i === 0 ? ' active' : '');
-        dot.style.background = c;
-        dot.title = c;
-        dot.addEventListener('click', () => {
-          document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-          dot.classList.add('active');
-          document.getElementById('newCatColor').value = c;
-        });
-        picker.appendChild(dot);
-      });
-    }
-
-    // ── Checklist ──────────────────────────────────────────
-    async function renderChecklist() {
-      await reloadGroup();
-      const grid = document.getElementById('checklistGrid');
-      const stats = DB.getGroupStats(group);
-      const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-
-      document.getElementById('catCount').textContent = `(${group.categories.length})`;
-      document.getElementById('statsRow').innerHTML = stats.total > 0
-        ? `✅ ${stats.done} / ${stats.total} <span style="color:var(--accent); font-weight:700; margin-right:8px;">${pct}%</span>
-           ${canEditChecklist ? `<button class="btn btn--ghost btn--sm" onclick="handleReset()" style="padding: 4px 10px; font-size: 0.75rem;">🔄 รีเซ็ตทั้งหมด</button>` : ''}`
-        : '';
-
-      // Build category cards
-      let html = group.categories.map((cat, ci) => renderCategoryCard(cat, ci)).join('');
-
-      // Add category card (owner only)
-      if (isOwner) {
-        html += `
-          <div class="add-category-card" onclick="openModal('modalAddCat')">
-            <div class="add-category-card__icon">📂</div>
-            <div>+ เพิ่มหมวดหมู่</div>
-          </div>
-        `;
-      }
-
-      if (group.categories.length === 0) {
-        html = `
-          <div class="empty-state" style="grid-column: 1/-1;">
-            <div class="empty-state__icon">📂</div>
-            <h3>${isOwner ? 'ยังไม่มีหมวดหมู่' : 'ยังไม่มีรายการ'}</h3>
-            <p>${isOwner ? 'กดปุ่ม + เพิ่มหมวดหมู่ เพื่อเริ่มสร้าง Checklist' : 'รอเจ้าของกลุ่มเพิ่มหมวดหมู่'}</p>
-          </div>
-        `;
-        if (isOwner) {
-          html += `
-            <div class="add-category-card" onclick="openModal('modalAddCat')" style="min-height:80px;">
-              <div class="add-category-card__icon">📂</div>
-              <div>+ เพิ่มหมวดหมู่แรก</div>
-            </div>
-          `;
-        }
-      }
-
-      grid.innerHTML = html;
-      attachItemEvents();
-
-      // Update hero stats
-      document.getElementById('heroMeta').querySelector('[class*="chip"]:nth-child(3)').textContent =
-        `✅ ${stats.done}/${stats.total} รายการ (${pct}%)`;
-    }
-
-    function renderCategoryCard(cat, ci) {
-      const checkedCount = cat.items.filter(i => i.checked).length;
-      const delay = ci * 0.06;
-
+    function renderOwnerCategoryCard(cat, ci) {
       const itemsHtml = cat.items.map(item => `
-        <div class="checklist-item ${item.checked ? 'is-checked' : ''}" data-item-id="${item.id}" data-cat-id="${cat.id}">
-          <input
-            type="checkbox"
-            class="item-checkbox"
-            data-item-id="${item.id}"
-            data-cat-id="${cat.id}"
-            ${item.checked ? 'checked' : ''}
-          />
-          <div style="flex:1;">
-            <div class="item-text">${escapeHtml(item.text)}</div>
-            ${item.checked && item.checkedByName ? `<div class="item-checked-by">✓ โดย ${escapeHtml(item.checkedByName)}</div>` : ''}
-          </div>
-          ${canEditChecklist ? `
-            <button
-              class="btn btn--danger btn--icon item-delete"
-              style="width:28px; height:28px; font-size:14px;"
-              data-del-item="${item.id}"
-              data-del-cat="${cat.id}"
-              title="ลบรายการ"
-            >✕</button>
-          ` : ''}
+        <div class="checklist-item" style="cursor:default;">
+          <div style="width:20px; height:20px; border-radius:6px; border:2px solid var(--border-light); flex-shrink:0; background:var(--surface-2);"></div>
+          <div class="item-text" style="flex:1;">${escapeHtml(item.text)}</div>
+          <button class="btn btn--danger btn--icon item-delete"
+            style="width:26px; height:26px; font-size:13px; opacity:0;"
+            data-del-item="${item.id}" data-del-cat="${cat.id}" title="ลบรายการ">✕</button>
         </div>
       `).join('');
 
-      const addRowHtml = canEditChecklist ? `
-        <div class="add-item-row">
-          <input
-            class="add-item-input"
-            type="text"
-            placeholder="+ พิมพ์รายการแล้วกด Enter..."
-            data-cat-id="${cat.id}"
-            maxlength="120"
-          />
-        </div>
-      ` : '';
-
-      const ownerActions = isOwner ? `
-        <div class="category-header__actions">
-          <button
-            class="btn btn--danger btn--icon"
-            style="width:28px; height:28px; font-size:14px;"
-            onclick="openDeleteCategory('${cat.id}', '${escapeHtml(cat.name)}')"
-            title="ลบหมวดหมู่"
-          >🗑</button>
-        </div>
-      ` : '';
-
       return `
-        <div class="category-card" style="animation-delay: ${delay}s;">
+        <div class="category-card" style="animation-delay:${ci*0.06}s;">
           <div class="category-header">
             <div class="category-header__left">
-              <div class="category-dot" style="background: ${cat.color};"></div>
+              <div class="category-dot" style="background:${cat.color};"></div>
               <div class="category-name">${escapeHtml(cat.name)}</div>
-              <div class="category-count">${checkedCount}/${cat.items.length}</div>
+              <div class="category-count">${cat.items.length} รายการ</div>
             </div>
-            ${ownerActions}
+            <div class="category-header__actions">
+              <button class="btn btn--danger btn--icon" style="width:28px; height:28px; font-size:14px;"
+                onclick="openDeleteCategory('${cat.id}','${escapeHtml(cat.name)}')" title="ลบหมวดหมู่">🗑</button>
+            </div>
           </div>
-          <div class="category-items">
-            ${itemsHtml}
-            ${cat.items.length === 0 && !isOwner ? `<div style="padding: 16px; text-align:center; color: var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>` : ''}
+          <div class="category-items">${itemsHtml}${cat.items.length === 0 ? '<div style="padding:12px; text-align:center; color:var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>' : ''}</div>
+          <div class="add-item-row">
+            <input class="add-item-input" type="text" placeholder="+ พิมพ์รายการแล้วกด Enter..."
+              data-cat-id="${cat.id}" maxlength="120" />
           </div>
-          ${addRowHtml}
         </div>
       `;
     }
 
-    // Attach event listeners to dynamic elements
-    function attachItemEvents() {
-      // Checkbox toggle
-      document.querySelectorAll('.item-checkbox').forEach(cb => {
-        cb.addEventListener('change', async () => {
-          const itemId = cb.dataset.itemId;
-          const catId = cb.dataset.catId;
-          const result = await DB.toggleItem(groupId, currentUser.id, catId, itemId);
+    function attachOwnerItemEvents() {
+      document.querySelectorAll('.add-item-input').forEach(input => {
+        input.addEventListener('keydown', async e => {
+          if (e.key !== 'Enter') return;
+          const text = input.value.trim();
+          const catId = input.dataset.catId;
+          if (!text) return;
+          const result = await DB.addItem(groupId, myMemberId, catId, text);
           if (result.success) {
-            renderChecklist();
+            input.value = '';
+            await reloadGroup();
+            renderTemplate();
+            renderMembersProgress();
+            // Focus back
+            setTimeout(() => {
+              const inp = document.querySelector(`.add-item-input[data-cat-id="${catId}"]`);
+              if (inp) inp.focus();
+            }, 50);
           } else {
             Auth.showToast(result.error, 'error');
-            cb.checked = !cb.checked; // revert
           }
         });
       });
 
-      // Delete item buttons
       document.querySelectorAll('[data-del-item]').forEach(btn => {
         btn.addEventListener('click', async e => {
           e.stopPropagation();
-          const itemId = btn.dataset.delItem;
-          const catId = btn.dataset.delCat;
-          const result = await DB.deleteItem(groupId, currentUser.id, catId, itemId);
+          const result = await DB.deleteItem(groupId, myMemberId, btn.dataset.delCat, btn.dataset.delItem);
           if (result.success) {
-            Auth.showToast('ลบรายการแล้ว', 'success');
-            renderChecklist();
+            await reloadGroup();
+            renderTemplate();
+            renderMembersProgress();
           } else {
             Auth.showToast(result.error, 'error');
-          }
-        });
-      });
-
-      // Add item inputs (Enter key)
-      document.querySelectorAll('.add-item-input').forEach(input => {
-        input.addEventListener('keydown', async e => {
-          if (e.key === 'Enter') {
-            const text = input.value.trim();
-            const catId = input.dataset.catId;
-            if (!text) return;
-            const result = await DB.addItem(groupId, currentUser.id, catId, text);
-            if (result.success) {
-              input.value = '';
-              renderChecklist();
-              // Focus back on same category's input
-              setTimeout(() => {
-                const inputs = document.querySelectorAll(`.add-item-input[data-cat-id="${catId}"]`);
-                if (inputs.length) inputs[0].focus();
-              }, 50);
-            } else {
-              Auth.showToast(result.error, 'error');
-            }
           }
         });
       });
     }
 
-    // ── Category Modal ─────────────────────────────────────
+    function renderMembersProgress() {
+      const container = document.getElementById('membersProgressList');
+      document.getElementById('memberCount').textContent = `(${group.members.length})`;
+      const stats = DB.getGroupStats(group);
+
+      if (group.members.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);">
+            <div style="font-size:2.5rem; margin-bottom:12px;">👥</div>
+            <p>ยังไม่มีสมาชิก</p>
+            <p style="font-size:0.85rem; margin-top:4px;">แชร์ลิงก์เชิญให้เพื่อนเข้ากลุ่ม</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = group.members.map(member => {
+        const ms = DB.getMemberStats(group, member.id);
+        const pct = ms.total > 0 ? Math.round((ms.done / ms.total) * 100) : 0;
+        const initial = member.displayName.charAt(0).toUpperCase();
+        const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--purple)';
+
+        // Items per category (for detail section)
+        const detailHtml = stats.total > 0 ? group.categories.map(cat => `
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+              <div style="width:8px; height:8px; border-radius:50%; background:${cat.color}; flex-shrink:0;"></div>
+              <span style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">${escapeHtml(cat.name)}</span>
+            </div>
+            ${cat.items.map(item => {
+              const checked = member.progress && member.progress[item.id];
+              return `
+                <div style="display:flex; align-items:center; gap:10px; padding:6px 0; padding-left:16px;">
+                  <div style="width:16px; height:16px; border-radius:4px; flex-shrink:0;
+                    background:${checked ? 'var(--success)' : 'var(--surface-3)'};
+                    border:2px solid ${checked ? 'var(--success)' : 'var(--border-light)'};
+                    display:flex; align-items:center; justify-content:center;">
+                    ${checked ? '<span style="color:#0d0d14; font-size:9px; font-weight:800;">✓</span>' : ''}
+                  </div>
+                  <span style="font-size:0.85rem; ${checked ? 'text-decoration:line-through; color:var(--text-muted);' : ''}">${escapeHtml(item.text)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `).join('') : '<p style="font-size:0.85rem; color:var(--text-dim);">ยังไม่มีรายการในเช็คลิส</p>';
+
+        return `
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:12px;">
+            <div style="padding:20px 24px; display:flex; align-items:center; gap:16px; cursor:pointer;"
+              onclick="toggleMemberDetail('${member.id}')">
+              <div style="width:40px; height:40px; border-radius:50%; background:var(--surface-3);
+                border:2px solid var(--border-light); display:flex; align-items:center; justify-content:center;
+                font-weight:700; font-size:1rem; color:var(--text); flex-shrink:0;">${initial}</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-weight:700; margin-bottom:6px;">${escapeHtml(member.displayName)}</div>
+                <div style="height:6px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition:width 0.5s ease;"></div>
+                </div>
+              </div>
+              <div style="text-align:right; flex-shrink:0;">
+                <div style="font-weight:700; font-size:1rem; color:${color};">${pct}%</div>
+                <div style="font-size:0.78rem; color:var(--text-muted);">${ms.done}/${ms.total}</div>
+              </div>
+              <button class="btn btn--danger btn--sm" style="padding:4px 10px; font-size:0.75rem;"
+                onclick="event.stopPropagation(); removeMember('${member.id}','${escapeHtml(member.displayName)}')" title="นำออก">✕</button>
+              <span id="arrow_${member.id}" style="color:var(--text-muted); font-size:0.8rem; flex-shrink:0;">▼</span>
+            </div>
+            <div id="detail_${member.id}" style="display:none; padding:0 24px 20px; border-top:1px solid var(--border);">
+              <div style="padding-top:16px;">${detailHtml}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleMemberDetail(memberId) {
+      const detail = document.getElementById(`detail_${memberId}`);
+      const arrow = document.getElementById(`arrow_${memberId}`);
+      const isOpen = detail.style.display !== 'none';
+      detail.style.display = isOpen ? 'none' : '';
+      arrow.textContent = isOpen ? '▼' : '▲';
+    }
+
+    async function removeMember(memberId, displayName) {
+      if (!confirm(`ต้องการนำ "${displayName}" ออกจากกลุ่มใช่ไหม?`)) return;
+      const result = await DB.removeMember(groupId, myMemberId, memberId);
+      if (result.success) {
+        Auth.showToast('นำสมาชิกออกแล้ว', 'success');
+        await reloadGroup();
+        renderHero();
+        renderMembersProgress();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // ── Member View ──────────────────────────────────────────
+    function renderMemberView() {
+      document.getElementById('ownerView').style.display = 'none';
+      document.getElementById('memberView').style.display = '';
+      renderMemberChecklist();
+    }
+
+    function renderMemberChecklist() {
+      if (!myMember) return;
+      const ms = DB.getMemberStats(group, myMemberId);
+      const pct = ms.total > 0 ? Math.round((ms.done / ms.total) * 100) : 0;
+      const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--purple)';
+
+      document.getElementById('memberGreetName').textContent = myMember.displayName;
+
+      // Progress bar
+      document.getElementById('memberProgressBar').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.85rem; color:var(--text-muted);">ความคืบหน้า</span>
+          <span style="font-weight:700; font-size:1rem; color:${color};">${ms.done}/${ms.total} รายการ (${pct}%)</span>
+        </div>
+        <div style="height:10px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
+          <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition:width 0.6s ease;"></div>
+        </div>
+        ${pct === 100 ? `<div style="text-align:center; margin-top:10px; font-size:0.9rem; color:var(--success);">🎉 ครบทุกรายการแล้ว!</div>` : ''}
+      `;
+
+      // Checklist categories
+      const progress = myMember.progress || {};
+      const container = document.getElementById('memberChecklist');
+
+      if (group.categories.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:60px 24px; color:var(--text-muted);">
+            <div style="font-size:3rem; margin-bottom:12px;">📋</div>
+            <p>รอเจ้าของกลุ่มเพิ่มรายการ...</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = group.categories.map((cat, ci) => {
+        const checkedCount = cat.items.filter(i => progress[i.id]).length;
+        const catPct = cat.items.length > 0 ? Math.round((checkedCount / cat.items.length) * 100) : 0;
+
+        const itemsHtml = cat.items.map(item => {
+          const checked = !!progress[item.id];
+          return `
+            <div class="checklist-item ${checked ? 'is-checked' : ''}" style="cursor:pointer;"
+              onclick="toggleMyItem('${item.id}')">
+              <input type="checkbox" class="item-checkbox" ${checked ? 'checked' : ''}
+                onclick="event.stopPropagation(); toggleMyItem('${item.id}')" />
+              <div class="item-text">${escapeHtml(item.text)}</div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="card" style="margin-bottom:16px; padding:0; overflow:hidden; animation-delay:${ci*0.06}s; animation: fadeUp 0.3s ease both;">
+            <div class="category-header">
+              <div class="category-header__left">
+                <div class="category-dot" style="background:${cat.color};"></div>
+                <div class="category-name">${escapeHtml(cat.name)}</div>
+                <div class="category-count">${checkedCount}/${cat.items.length}</div>
+              </div>
+              <div style="font-size:0.78rem; color:var(--text-muted);">${catPct}%</div>
+            </div>
+            <div class="category-items">
+              ${cat.items.length === 0
+                ? '<div style="padding:16px; text-align:center; color:var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>'
+                : itemsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function toggleMyItem(itemId) {
+      const result = await DB.toggleItem(groupId, myMemberId, itemId);
+      if (result.success) {
+        await reloadGroup();
+        renderMemberChecklist();
+        renderHero();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    async function handleReset() {
+      if (!confirm('ต้องการรีเซ็ตรายการทั้งหมดของคุณใช่ไหม?')) return;
+      const result = await DB.resetMemberProgress(groupId, myMemberId);
+      if (result.success) {
+        Auth.showToast('รีเซ็ตแล้ว', 'success');
+        await reloadGroup();
+        renderMemberChecklist();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    async function handleLeave() {
+      if (!confirm('ต้องการออกจากกลุ่มนี้ใช่ไหม? Progress ของคุณจะถูกลบ')) return;
+      const result = await DB.leaveGroup(groupId, myMemberId);
+      if (result.success) {
+        DB.clearMemberSession(groupId);
+        Auth.showToast('ออกจากกลุ่มแล้ว', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 800);
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    // ── Category Modals ──────────────────────────────────────
     function openModal(id) {
       document.getElementById(id).style.display = 'flex';
-      // Focus input if add category modal
-      if (id === 'modalAddCat') {
-        setTimeout(() => document.getElementById('newCatName').focus(), 100);
-      }
+      if (id === 'modalAddCat') setTimeout(() => document.getElementById('newCatName').focus(), 100);
     }
 
     function closeModal(id) {
@@ -504,14 +750,10 @@
       }
     }
 
-    // Close modal on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
-      overlay.addEventListener('click', e => {
-        if (e.target === overlay) closeModal(overlay.id);
-      });
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
     });
 
-    // Enter key in modal
     document.getElementById('newCatName').addEventListener('keydown', e => {
       if (e.key === 'Enter') submitAddCategory();
     });
@@ -528,17 +770,18 @@
       }
       errEl.style.display = 'none';
 
-      const result = await DB.addCategory(groupId, currentUser.id, { name, color });
+      const result = await DB.addCategory(groupId, myMemberId, { name, color });
       if (result.success) {
         closeModal('modalAddCat');
-        await renderChecklist();
-        Auth.showToast(`เพิ่มหมวดหมู่ "${name}" แล้ว! 🎉`, 'success');
+        await reloadGroup();
+        renderHero();
+        renderTemplate();
+        Auth.showToast(`เพิ่ม "${name}" แล้ว!`, 'success');
       } else {
         Auth.showToast(result.error, 'error');
       }
     }
 
-    // ── Delete Category ────────────────────────────────────
     function openDeleteCategory(catId, catName) {
       pendingDelCatId = catId;
       document.getElementById('delCatName').textContent = catName;
@@ -547,10 +790,13 @@
 
     async function confirmDeleteCategory() {
       if (!pendingDelCatId) return;
-      const result = await DB.deleteCategory(groupId, currentUser.id, pendingDelCatId);
+      const result = await DB.deleteCategory(groupId, myMemberId, pendingDelCatId);
       if (result.success) {
         closeModal('modalDelCat');
-        await renderChecklist();
+        await reloadGroup();
+        renderHero();
+        renderTemplate();
+        renderMembersProgress();
         Auth.showToast('ลบหมวดหมู่แล้ว', 'success');
       } else {
         Auth.showToast(result.error, 'error');
@@ -558,9 +804,8 @@
       pendingDelCatId = null;
     }
 
-    // ── Delete Group ───────────────────────────────────────
     async function confirmDeleteGroup() {
-      const result = await DB.deleteGroup(groupId, currentUser.id);
+      const result = await DB.deleteGroup(groupId, myMemberId);
       if (result.success) {
         Auth.showToast('ลบกลุ่มแล้ว', 'success');
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
@@ -570,42 +815,44 @@
       }
     }
 
-    // ── Leave Group ────────────────────────────────────────
-    async function handleLeave() {
-      if (!confirm('ต้องการออกจากกลุ่มนี้ใช่ไหม?')) return;
-      const result = await DB.leaveGroup(groupId, currentUser.id);
-      if (result.success) {
-        Auth.showToast('ออกจากกลุ่มแล้ว', 'success');
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
-      } else {
-        Auth.showToast(result.error, 'error');
-      }
+    // Color picker
+    function setupCatColorPicker() {
+      const picker = document.getElementById('catColorPicker');
+      picker.innerHTML = '';
+      COLORS.forEach((c, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+        dot.style.background = c;
+        dot.title = c;
+        dot.addEventListener('click', () => {
+          document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+          document.getElementById('newCatColor').value = c;
+        });
+        picker.appendChild(dot);
+      });
     }
 
-    // ── Owner Manage Permissions & Editor Reset ──
-    async function toggleEdit(userId) {
-      const result = await DB.toggleMemberEdit(groupId, currentUser.id, userId);
-      if (result.success) {
-        Auth.showToast(result.canEdit ? 'สิทธิ์การแก้ไข: แก้ไขได้' : 'สิทธิ์การแก้ไข: ดูได้อย่างเดียว', 'success');
-        await reloadGroup();
-        renderMembers();
+    // Auto-refresh when tab regains focus
+    window.addEventListener('focus', async () => {
+      if (!group) return;
+      await reloadGroup();
+      if (isOwner) {
+        renderHero();
+        renderTemplate();
+        renderMembersProgress();
       } else {
-        Auth.showToast(result.error, 'error');
+        renderHero();
+        renderMemberChecklist();
       }
-    }
+    });
 
-    async function handleReset() {
-      if (!confirm('ต้องการรีเซ็ตรายการในทุกหมวดหมู่ใช่หรือไม่?')) return;
-      const result = await DB.resetChecklist(groupId, currentUser.id);
-      if (result.success) {
-        Auth.showToast('รีเซ็ตรายการสำเร็จ', 'success');
-        await renderChecklist();
-      } else {
-        Auth.showToast(result.error, 'error');
-      }
-    }
+    // Enter key on join name input
+    document.getElementById('joinName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleJoin();
+    });
 
-    // ── Start ──────────────────────────────────────────────
+    // ── Start ────────────────────────────────────────────────
     init();
   </script>
 </body>
