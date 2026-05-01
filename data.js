@@ -230,7 +230,8 @@ const DB = {
   async deleteGroup(groupId, userId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== userId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่ลบได้' };
+    const isAdmin = await this.isAdminId(userId);
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่ลบได้' };
 
     const { error } = await _sb.from('cl_groups').delete().eq('id', groupId);
     if (error) return { success: false, error: 'เกิดข้อผิดพลาดในการลบกลุ่ม' };
@@ -241,7 +242,8 @@ const DB = {
   async addCategory(groupId, userId, { name, color }) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== userId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
+    const isAdmin = await this.isAdminId(userId);
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
 
     const category = {
       id: this.generateId(),
@@ -260,7 +262,8 @@ const DB = {
   async deleteCategory(groupId, userId, categoryId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== userId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
+    const isAdmin = await this.isAdminId(userId);
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
 
     group.categories = group.categories.filter(c => c.id !== categoryId);
 
@@ -272,7 +275,8 @@ const DB = {
   async renameCategory(groupId, userId, categoryId, newName) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== userId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
+    const isAdmin = await this.isAdminId(userId);
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการได้' };
 
     const cat = group.categories.find(c => c.id === categoryId);
     if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
@@ -288,7 +292,8 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
 
-    const canEdit = group.ownerId === userId || (group.members.find(m => m.userId === userId)?.canEdit);
+    const isAdmin = await this.isAdminId(userId);
+    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
     if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์เพิ่มรายการ' };
 
     const cat = group.categories.find(c => c.id === categoryId);
@@ -313,7 +318,8 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
 
-    const canEdit = group.ownerId === userId || (group.members.find(m => m.userId === userId)?.canEdit);
+    const isAdmin = await this.isAdminId(userId);
+    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
     if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์ลบรายการ' };
 
     const cat = group.categories.find(c => c.id === categoryId);
@@ -328,11 +334,13 @@ const DB = {
   async toggleItem(groupId, userId, categoryId, itemId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (!group.members.some(m => m.userId === userId)) {
+
+    const isAdmin = await this.isAdminId(userId);
+    if (!isAdmin && !group.members.some(m => m.userId === userId)) {
       return { success: false, error: 'คุณไม่ได้อยู่ในกลุ่มนี้' };
     }
 
-    const canEdit = group.ownerId === userId || (group.members.find(m => m.userId === userId)?.canEdit);
+    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
     if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์แก้ไขรายการได้ (เป็นผู้ชม)' };
 
     const cat = group.categories.find(c => c.id === categoryId);
@@ -355,7 +363,8 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
 
-    const canEdit = group.ownerId === userId || (group.members.find(m => m.userId === userId)?.canEdit);
+    const isAdmin = await this.isAdminId(userId);
+    const canEdit = group.ownerId === userId || isAdmin || (group.members.find(m => m.userId === userId)?.canEdit);
     if (!canEdit) return { success: false, error: 'คุณไม่มีสิทธิ์รีเซ็ตรายการได้' };
 
     group.categories.forEach(c => {
@@ -374,7 +383,8 @@ const DB = {
   async toggleMemberEdit(groupId, ownerId, targetUserId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== ownerId) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการสิทธิ์ได้' };
+    const isAdmin = await this.isAdminId(ownerId);
+    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้นที่จัดการสิทธิ์ได้' };
 
     const member = group.members.find(m => m.userId === targetUserId);
     if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
@@ -385,6 +395,11 @@ const DB = {
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true, canEdit: member.canEdit };
+  },
+
+  async isAdminId(userId) {
+    const user = await this.findUserById(userId);
+    return user && (user.role === 'admin' || user.username.toLowerCase() === 'admin');
   },
 
   getGroupStats(group) {
@@ -399,7 +414,8 @@ const DB = {
   async regenerateInviteCode(groupId, ownerId) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    if (group.ownerId !== ownerId) return { success: false, error: 'เฉพาะเจ้าของ' };
+    const isAdmin = await this.isAdminId(ownerId);
+    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของ' };
 
     group.inviteCode = this.generateInviteCode();
     const { error } = await _sb
