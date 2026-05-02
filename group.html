@@ -132,6 +132,7 @@
 
       <!-- Personal Checklist -->
       <div style="max-width:800px; margin:20px auto 48px; padding:0 24px;">
+        <div id="memberTabs" style="display:flex; gap:8px; margin-bottom:16px;"></div>
         <div id="memberChecklist"></div>
       </div>
     </div>
@@ -217,6 +218,7 @@
     let myMemberId = null;
     let myMember = null;
     let pendingDelCatId = null;
+    let memberMode = 'checklist';
 
     const COLORS = ['#f5a623','#a78bfa','#34d399','#60a5fa','#f472b6','#fb923c','#f43f5e','#06b6d4','#84cc16','#eab308'];
 
@@ -642,10 +644,12 @@
     function renderMemberView() {
       document.getElementById('ownerView').style.display = 'none';
       document.getElementById('memberView').style.display = '';
+      memberMode = 'checklist';
+      renderMemberHeader();
       renderMemberChecklist();
     }
 
-    function renderMemberChecklist() {
+    function renderMemberHeader() {
       if (!myMember) return;
       const ms = DB.getMemberStats(group, myMemberId);
       const pct = ms.total > 0 ? Math.round((ms.done / ms.total) * 100) : 0;
@@ -653,7 +657,6 @@
 
       document.getElementById('memberGreetName').textContent = myMember.displayName;
 
-      // Progress bar
       document.getElementById('memberProgressBar').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span style="font-size:0.85rem; color:var(--text-muted);">ความคืบหน้า</span>
@@ -662,11 +665,34 @@
         <div style="height:10px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
           <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition:width 0.6s ease;"></div>
         </div>
-        ${pct === 100 ? `<div style="text-align:center; margin-top:10px; font-size:0.9rem; color:var(--success);">🎉 ครบทุกรายการแล้ว!</div>` : ''}
+        ${pct === 100 ? '<div style="text-align:center; margin-top:10px; font-size:0.9rem; color:var(--success);">🎉 ครบทุกรายการแล้ว!</div>' : ''}
       `;
 
-      // Checklist categories
+      // นับรายการที่ยังไม่ได้เลือก (template มีแต่ member ยังไม่ได้เลือก)
+      const sel = Array.isArray(myMember.selectedItems) ? myMember.selectedItems : null;
+      let unselected = 0;
+      if (sel !== null) {
+        group.categories.forEach(cat => cat.items.forEach(i => { if (!sel.includes(i.id)) unselected++; }));
+      }
+
+      document.getElementById('memberTabs').innerHTML = `
+        <button id="tabChecklist" onclick="setMemberMode('checklist')"
+          class="btn btn--sm ${memberMode === 'checklist' ? 'btn--primary' : 'btn--ghost'}">
+          ✅ เช็คลิสของฉัน
+        </button>
+        <button id="tabSelect" onclick="setMemberMode('select')"
+          class="btn btn--sm ${memberMode === 'select' ? 'btn--primary' : 'btn--ghost'}"
+          style="position:relative;">
+          📋 เลือกรายการ
+          ${unselected > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;background:var(--danger);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:0 5px;min-width:16px;height:16px;margin-left:4px;vertical-align:middle;">+${unselected}</span>` : ''}
+        </button>
+      `;
+    }
+
+    function renderMemberChecklist() {
+      if (!myMember) return;
       const progress = myMember.progress || {};
+      const sel = Array.isArray(myMember.selectedItems) ? myMember.selectedItems : null;
       const container = document.getElementById('memberChecklist');
 
       if (group.categories.length === 0) {
@@ -679,11 +705,13 @@
         return;
       }
 
-      container.innerHTML = group.categories.map((cat, ci) => {
-        const checkedCount = cat.items.filter(i => progress[i.id]).length;
-        const catPct = cat.items.length > 0 ? Math.round((checkedCount / cat.items.length) * 100) : 0;
+      const catHtml = group.categories.map((cat, ci) => {
+        const catItems = sel ? cat.items.filter(i => sel.includes(i.id)) : cat.items;
+        if (catItems.length === 0) return '';
+        const checkedCount = catItems.filter(i => progress[i.id]).length;
+        const catPct = Math.round((checkedCount / catItems.length) * 100);
 
-        const itemsHtml = cat.items.map(item => {
+        const itemsHtml = catItems.map(item => {
           const checked = !!progress[item.id];
           return `
             <div class="checklist-item ${checked ? 'is-checked' : ''}" style="cursor:pointer;"
@@ -696,23 +724,132 @@
         }).join('');
 
         return `
-          <div class="card" style="margin-bottom:16px; padding:0; overflow:hidden; animation-delay:${ci*0.06}s; animation: fadeUp 0.3s ease both;">
+          <div class="card" style="margin-bottom:16px; padding:0; overflow:hidden; animation: fadeUp 0.3s ease both; animation-delay:${ci*0.06}s;">
             <div class="category-header">
               <div class="category-header__left">
                 <div class="category-dot" style="background:${cat.color};"></div>
                 <div class="category-name">${escapeHtml(cat.name)}</div>
-                <div class="category-count">${checkedCount}/${cat.items.length}</div>
+                <div class="category-count">${checkedCount}/${catItems.length}</div>
               </div>
               <div style="font-size:0.78rem; color:var(--text-muted);">${catPct}%</div>
             </div>
-            <div class="category-items">
-              ${cat.items.length === 0
-                ? '<div style="padding:16px; text-align:center; color:var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>'
-                : itemsHtml}
-            </div>
+            <div class="category-items">${itemsHtml}</div>
           </div>
         `;
-      }).join('');
+      }).filter(Boolean).join('');
+
+      if (!catHtml) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:48px 24px; color:var(--text-muted);">
+            <div style="font-size:2.5rem; margin-bottom:12px;">📋</div>
+            <p style="margin-bottom:16px;">ยังไม่ได้เลือกรายการ</p>
+            <button class="btn btn--primary btn--sm" onclick="setMemberMode('select')">📋 ไปเลือกรายการ →</button>
+          </div>
+        `;
+        return;
+      }
+      container.innerHTML = catHtml;
+    }
+
+    function renderMemberSelectItems() {
+      if (!myMember) return;
+      const progress = myMember.progress || {};
+      const sel = Array.isArray(myMember.selectedItems) ? myMember.selectedItems : null;
+      const container = document.getElementById('memberChecklist');
+
+      if (group.categories.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:60px 24px; color:var(--text-muted);">
+            <div style="font-size:3rem; margin-bottom:12px;">📋</div>
+            <p>รอเจ้าของกลุ่มเพิ่มรายการ...</p>
+          </div>
+        `;
+        return;
+      }
+
+      const catHtml = group.categories.map((cat, ci) => {
+        if (cat.items.length === 0) return '';
+        const selectedInCat = sel ? cat.items.filter(i => sel.includes(i.id)).length : cat.items.length;
+
+        const itemsHtml = cat.items.map(item => {
+          const isSelected = sel === null || sel.includes(item.id);
+          const isDone = !!progress[item.id];
+          return `
+            <div class="checklist-item" style="cursor:pointer;" onclick="toggleMySelectedItem('${item.id}')">
+              <div style="width:22px; height:22px; border-radius:6px; flex-shrink:0;
+                background:${isSelected ? 'var(--accent-dim)' : 'var(--surface-2)'};
+                border:2px solid ${isSelected ? 'var(--accent)' : 'var(--border-light)'};
+                display:flex; align-items:center; justify-content:center; transition:all 0.15s;">
+                ${isSelected ? '<span style="color:var(--accent); font-size:14px; font-weight:800; line-height:1;">✓</span>' : ''}
+              </div>
+              <div class="item-text" style="flex:1; ${!isSelected ? 'opacity:0.45;' : ''}">${escapeHtml(item.text)}</div>
+              ${isDone ? '<span style="font-size:0.72rem; color:var(--success); flex-shrink:0; font-weight:600;">✅</span>' : ''}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="card" style="margin-bottom:16px; padding:0; overflow:hidden; animation: fadeUp 0.3s ease both; animation-delay:${ci*0.06}s;">
+            <div class="category-header">
+              <div class="category-header__left">
+                <div class="category-dot" style="background:${cat.color};"></div>
+                <div class="category-name">${escapeHtml(cat.name)}</div>
+                <div class="category-count">${selectedInCat}/${cat.items.length} เลือก</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn--ghost btn--sm" style="font-size:0.72rem; padding:3px 8px;"
+                  onclick="event.stopPropagation(); selectAllInCat('${cat.id}')">เลือกทั้งหมด</button>
+                <button class="btn btn--ghost btn--sm" style="font-size:0.72rem; padding:3px 8px;"
+                  onclick="event.stopPropagation(); deselectAllInCat('${cat.id}')">ยกเลิกทั้งหมด</button>
+              </div>
+            </div>
+            <div class="category-items">${itemsHtml}</div>
+          </div>
+        `;
+      }).filter(Boolean).join('');
+
+      container.innerHTML = catHtml || `<div style="text-align:center; padding:40px; color:var(--text-muted);">ยังไม่มีรายการ</div>`;
+    }
+
+    function setMemberMode(mode) {
+      memberMode = mode;
+      renderMemberHeader();
+      if (mode === 'checklist') renderMemberChecklist();
+      else renderMemberSelectItems();
+    }
+
+    async function toggleMySelectedItem(itemId) {
+      const result = await DB.toggleSelectedItem(groupId, myMemberId, itemId);
+      if (result.success) {
+        await reloadGroup();
+        renderMemberHeader();
+        renderMemberSelectItems();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
+    }
+
+    async function selectAllInCat(catId) {
+      const cat = group.categories.find(c => c.id === catId);
+      if (!cat) return;
+      const current = Array.isArray(myMember.selectedItems)
+        ? [...myMember.selectedItems]
+        : group.categories.flatMap(c => c.items.map(i => i.id));
+      const newSel = [...new Set([...current, ...cat.items.map(i => i.id)])];
+      const result = await DB.setSelectedItems(groupId, myMemberId, newSel);
+      if (result.success) { await reloadGroup(); renderMemberHeader(); renderMemberSelectItems(); }
+    }
+
+    async function deselectAllInCat(catId) {
+      const cat = group.categories.find(c => c.id === catId);
+      if (!cat) return;
+      const catIds = new Set(cat.items.map(i => i.id));
+      const current = Array.isArray(myMember.selectedItems)
+        ? myMember.selectedItems
+        : group.categories.flatMap(c => c.items.map(i => i.id));
+      const newSel = current.filter(id => !catIds.has(id));
+      const result = await DB.setSelectedItems(groupId, myMemberId, newSel);
+      if (result.success) { await reloadGroup(); renderMemberHeader(); renderMemberSelectItems(); }
     }
 
     async function toggleMyItem(itemId) {
@@ -723,6 +860,7 @@
           renderTemplate();
           renderMembersProgress();
         } else {
+          renderMemberHeader();
           renderMemberChecklist();
         }
         renderHero();
@@ -737,7 +875,9 @@
       if (result.success) {
         Auth.showToast('รีเซ็ตแล้ว', 'success');
         await reloadGroup();
-        renderMemberChecklist();
+        renderMemberHeader();
+        if (memberMode === 'checklist') renderMemberChecklist();
+        else renderMemberSelectItems();
       } else {
         Auth.showToast(result.error, 'error');
       }
@@ -856,13 +996,14 @@
     window.addEventListener('focus', async () => {
       if (!group) return;
       await reloadGroup();
+      renderHero();
       if (isOwner) {
-        renderHero();
         renderTemplate();
         renderMembersProgress();
       } else {
-        renderHero();
-        renderMemberChecklist();
+        renderMemberHeader();
+        if (memberMode === 'checklist') renderMemberChecklist();
+        else renderMemberSelectItems();
       }
     });
 

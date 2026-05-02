@@ -221,18 +221,54 @@ const DB = {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
 
+    const allItemIds = [];
+    group.categories.forEach(cat => cat.items.forEach(i => allItemIds.push(i.id)));
+
     const memberId = 'anon_' + this.generateId();
     group.members.push({
       id: memberId,
       displayName: displayName.trim(),
       isOwner: false,
       joinedAt: new Date().toISOString(),
+      selectedItems: allItemIds,
       progress: {},
     });
 
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'ไม่สามารถเข้าร่วมได้' };
     return { success: true, memberId, displayName: displayName.trim() };
+  },
+
+  async toggleSelectedItem(groupId, memberId, itemId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+
+    if (!Array.isArray(member.selectedItems)) {
+      const allIds = [];
+      group.categories.forEach(cat => cat.items.forEach(i => allIds.push(i.id)));
+      member.selectedItems = allIds.filter(id => id !== itemId);
+    } else {
+      const idx = member.selectedItems.indexOf(itemId);
+      if (idx === -1) member.selectedItems.push(itemId);
+      else member.selectedItems.splice(idx, 1);
+    }
+
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
+  },
+
+  async setSelectedItems(groupId, memberId, itemIds) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+    member.selectedItems = itemIds;
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
   },
 
   async leaveGroup(groupId, memberId) {
@@ -386,15 +422,18 @@ const DB = {
     return { success: true };
   },
 
-  // สถิติของสมาชิกคนเดียว
+  // สถิติของสมาชิกคนเดียว (นับเฉพาะ selectedItems ถ้ามี)
   getMemberStats(group, memberId) {
     const member = group.members.find(m => m.id === memberId);
     const progress = member?.progress || {};
+    const selectedItems = Array.isArray(member?.selectedItems) ? member.selectedItems : null;
     let total = 0, done = 0;
     group.categories.forEach(cat => {
       cat.items.forEach(item => {
-        total++;
-        if (progress[item.id]) done++;
+        if (selectedItems === null || selectedItems.includes(item.id)) {
+          total++;
+          if (progress[item.id]) done++;
+        }
       });
     });
     return { total, done };
