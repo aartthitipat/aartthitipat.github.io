@@ -17,7 +17,7 @@
   <div id="joinOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:500; overflow-y:auto;">
     <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px;">
       <div style="width:100%; max-width:420px; animation: fadeUp 0.4s ease;">
-        <div class="card" style="text-align:center; padding: 40px 32px;">
+        <div class="card" style="text-align:center; padding:40px 32px;">
           <div id="joinGroupEmoji" style="font-size:3.5rem; margin-bottom:12px;">📋</div>
           <p style="font-size:0.78rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">คุณถูกเชิญเข้ากลุ่ม</p>
           <h2 id="joinGroupName" style="font-size:1.5rem; margin-bottom:6px;">กำลังโหลด...</h2>
@@ -64,7 +64,7 @@
 
     <!-- Hero -->
     <div class="group-hero" id="groupHero">
-      <div style="max-width:1200px; margin:0 auto;">
+      <div style="max-width:1100px; margin:0 auto;">
         <a href="dashboard.html" class="group-hero__back" id="heroBack" style="display:none;">← กลับ Dashboard</a>
         <div class="group-hero__top">
           <div>
@@ -83,29 +83,23 @@
 
     <!-- ── Owner View ── -->
     <div id="ownerView" style="display:none;">
+      <div style="max-width:1100px; margin:0 auto; padding:28px 32px 48px;">
 
-      <!-- Checklist Template -->
-      <div class="checklist-area">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-          <div class="section-title">📝 รายการเช็คลิส <span id="catCount"></span></div>
-          <button class="btn btn--primary btn--sm" onclick="openModal('modalAddCat')">+ เพิ่มหมวดหมู่</button>
+          <div class="section-title">👥 สมาชิก <span id="memberCount"></span></div>
+          <div style="font-size:0.8rem; color:var(--text-dim);">พิมพ์รายการในช่องของแต่ละสมาชิก แล้วกด Enter</div>
         </div>
-        <div class="checklist-grid" id="templateGrid"></div>
-      </div>
 
-      <!-- Members Progress -->
-      <div style="max-width:1200px; margin:0 auto; padding:0 32px 48px;">
-        <div class="section-title" style="margin-bottom:16px;">👥 ความคืบหน้าสมาชิก <span id="memberCount"></span></div>
-        <div id="membersProgressList"></div>
+        <div class="checklist-grid" id="ownerMemberGrid"></div>
       </div>
     </div>
 
     <!-- ── Member View ── -->
     <div id="memberView" style="display:none;">
+      <div style="max-width:600px; margin:24px auto 48px; padding:0 24px;">
 
-      <!-- Member Header Card -->
-      <div style="max-width:720px; margin:24px auto 0; padding:0 24px;">
-        <div class="card" style="padding:24px 28px;">
+        <!-- Member Header Card -->
+        <div class="card" style="padding:24px 28px; margin-bottom:16px;">
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
               <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:3px;">สวัสดี!</p>
@@ -118,11 +112,10 @@
           </div>
           <div id="memberProgressBar"></div>
         </div>
-      </div>
 
-      <!-- Personal Checklist -->
-      <div style="max-width:720px; margin:16px auto 48px; padding:0 24px;">
+        <!-- Checklist -->
         <div id="memberChecklist"></div>
+
       </div>
     </div>
 
@@ -130,51 +123,6 @@
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
-
-  <!-- ── Modal: Add Category ── -->
-  <div class="modal-overlay" id="modalAddCat" style="display:none;">
-    <div class="modal">
-      <div class="modal__header">
-        <h3>➕ เพิ่มหมวดหมู่</h3>
-        <button class="modal__close" onclick="closeModal('modalAddCat')">✕</button>
-      </div>
-      <div class="modal__body">
-        <div class="form-group">
-          <label class="form-label">ชื่อหมวดหมู่</label>
-          <input class="form-input" type="text" id="newCatName"
-            placeholder="เช่น อาหาร, เสื้อผ้า, อุปกรณ์..." maxlength="40" />
-          <span class="form-error" id="catNameError" style="display:none;"></span>
-        </div>
-        <div class="form-group">
-          <label class="form-label">สีหมวดหมู่</label>
-          <div class="color-picker" id="catColorPicker"></div>
-          <input type="hidden" id="newCatColor" value="#f5a623" />
-        </div>
-      </div>
-      <div class="modal__footer">
-        <button class="btn btn--ghost" onclick="closeModal('modalAddCat')">ยกเลิก</button>
-        <button class="btn btn--primary" onclick="submitAddCategory()">เพิ่มหมวดหมู่</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Modal: Delete Category ── -->
-  <div class="modal-overlay" id="modalDelCat" style="display:none;">
-    <div class="modal">
-      <div class="modal__header">
-        <h3 style="color:var(--danger);">🗑️ ลบหมวดหมู่?</h3>
-        <button class="modal__close" onclick="closeModal('modalDelCat')">✕</button>
-      </div>
-      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:8px;">
-        ต้องการลบหมวดหมู่ "<strong id="delCatName"></strong>" ใช่ไหม?<br/>
-        <span style="color:var(--danger); font-size:0.82rem;">รายการและ progress ของสมาชิกทั้งหมดในหมวดนี้จะถูกลบด้วย</span>
-      </p>
-      <div class="modal__footer">
-        <button class="btn btn--ghost" onclick="closeModal('modalDelCat')">ยกเลิก</button>
-        <button class="btn btn--danger" onclick="confirmDeleteCategory()">ลบเลย</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ── Modal: Delete Group ── -->
   <div class="modal-overlay" id="modalDelGroup" style="display:none;">
@@ -193,21 +141,6 @@
     </div>
   </div>
 
-  <!-- ── Modal: Assign Item ── -->
-  <div class="modal-overlay" id="modalAssignItem" style="display:none;">
-    <div class="modal">
-      <div class="modal__header">
-        <h3>👤 กำหนดผู้รับผิดชอบ</h3>
-        <button class="modal__close" onclick="closeModal('modalAssignItem')">✕</button>
-      </div>
-      <div class="modal__body">
-        <p id="assignItemText" style="font-size:0.85rem; color:var(--text-muted); background:var(--surface-2); padding:10px 14px; border-radius:8px; border:1px solid var(--border); margin-bottom:4px;"></p>
-        <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:12px;">เลือกสมาชิกที่รับผิดชอบรายการนี้</p>
-        <div id="assignMemberList" style="display:flex; flex-direction:column; gap:8px;"></div>
-      </div>
-    </div>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="data.js"></script>
   <script src="auth.js"></script>
@@ -221,10 +154,6 @@
     let isOwner = false;
     let myMemberId = null;
     let myMember = null;
-    let pendingDelCatId = null;
-    let pendingAssignItem = null; // { itemId, catId }
-
-    const COLORS = ['#f5a623','#a78bfa','#34d399','#60a5fa','#f472b6','#fb923c','#f43f5e','#06b6d4','#84cc16','#eab308'];
 
     // ── Init ─────────────────────────────────────────────────
     async function init() {
@@ -243,7 +172,7 @@
           myMemberId = currentUser.id;
           myMember = group.members.find(m => m.id === myMemberId);
           if (!myMember) {
-            myMember = { id: myMemberId, displayName: currentUser.username, isOwner: true, progress: {} };
+            myMember = { id: myMemberId, displayName: currentUser.username, isOwner: true, progress: {}, items: [] };
             group.members.push(myMember);
             await DB.updateGroupData(group);
           }
@@ -270,7 +199,6 @@
         DB.clearMemberSession(groupId);
       }
 
-      // ยังไม่ได้เข้าร่วม
       showJoinOverlay();
     }
 
@@ -371,11 +299,8 @@
       document.getElementById('heroName').textContent = group.name;
 
       const stats = DB.getGroupStats(group);
-      // count non-owner members
-      const memberOnly = group.members.filter(m => !m.isOwner).length;
       document.getElementById('heroMeta').innerHTML = `
-        <div class="group-hero__chip">👥 ${memberOnly} สมาชิก</div>
-        <div class="group-hero__chip">📂 ${group.categories.length} หมวดหมู่</div>
+        <div class="group-hero__chip">👥 ${stats.memberCount} สมาชิก</div>
         <div class="group-hero__chip">📝 ${stats.total} รายการ</div>
         ${group.description ? `<div class="group-hero__chip">${escapeHtml(group.description)}</div>` : ''}
       `;
@@ -429,135 +354,105 @@
     function renderOwnerView() {
       document.getElementById('ownerView').style.display = '';
       document.getElementById('memberView').style.display = 'none';
-      renderTemplate();
-      renderMembersProgress();
-      setupCatColorPicker();
+      renderMemberCards();
     }
 
-    function renderTemplate() {
-      document.getElementById('catCount').textContent = `(${group.categories.length})`;
+    function renderMemberCards() {
+      const nonOwners = group.members.filter(m => !m.isOwner);
+      document.getElementById('memberCount').textContent = `(${nonOwners.length})`;
+      const grid = document.getElementById('ownerMemberGrid');
 
-      if (group.categories.length === 0) {
-        document.getElementById('templateGrid').innerHTML = `
+      if (nonOwners.length === 0) {
+        grid.innerHTML = `
           <div class="empty-state" style="grid-column:1/-1;">
-            <div class="empty-state__icon">📋</div>
-            <h3>ยังไม่มีรายการ</h3>
-            <p>เพิ่มหมวดหมู่เพื่อเริ่มสร้างเช็คลิส</p>
-          </div>
-          <div class="add-category-card" onclick="openModal('modalAddCat')" style="min-height:80px;">
-            <div class="add-category-card__icon">📂</div>
-            <div>+ เพิ่มหมวดหมู่แรก</div>
+            <div class="empty-state__icon">👥</div>
+            <h3>ยังไม่มีสมาชิก</h3>
+            <p style="margin-bottom:20px;">แชร์ลิงก์เชิญให้เพื่อนเข้ากลุ่ม</p>
           </div>
         `;
         return;
       }
 
-      let html = group.categories.map((cat, ci) => renderOwnerCategoryCard(cat, ci)).join('');
-      html += `
-        <div class="add-category-card" onclick="openModal('modalAddCat')">
-          <div class="add-category-card__icon">📂</div>
-          <div>+ เพิ่มหมวดหมู่</div>
-        </div>
-      `;
-      document.getElementById('templateGrid').innerHTML = html;
-      attachOwnerItemEvents();
+      grid.innerHTML = nonOwners.map((member, i) => renderMemberCard(member, i)).join('');
+      attachMemberCardEvents();
     }
 
-    function renderOwnerCategoryCard(cat, ci) {
-      const progress = myMember ? (myMember.progress || {}) : {};
+    function renderMemberCard(member, index) {
+      const items = Array.isArray(member.items) ? member.items : [];
+      const ms = DB.getMemberStats(group, member.id);
+      const pct = ms.total > 0 ? Math.round((ms.done / ms.total) * 100) : 0;
+      const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--purple)';
+      const initial = member.displayName.charAt(0).toUpperCase();
 
-      // Count assigned
-      const assignedCount = cat.items.filter(i => i.assignedTo).length;
-
-      const itemsHtml = cat.items.map(item => {
-        const checked = !!progress[item.id];
-        const assignedMember = item.assignedTo
-          ? group.members.find(m => m.id === item.assignedTo)
-          : null;
-        const initial = assignedMember
-          ? assignedMember.displayName.charAt(0).toUpperCase()
-          : '?';
-
-        return `
-          <div class="checklist-item ${checked ? 'is-checked' : ''}">
-            <input type="checkbox" class="item-checkbox" ${checked ? 'checked' : ''}
-              onclick="toggleMyItem('${item.id}')" />
-            <div class="item-text" style="flex:1; cursor:pointer;" onclick="toggleMyItem('${item.id}')">${escapeHtml(item.text)}</div>
-            <button class="item-assignee-btn ${assignedMember ? 'item-assignee-btn--assigned' : ''}"
-              onclick="openAssignModal('${item.id}','${cat.id}','${escapeHtml(item.text).replace(/'/g,"&#39;")}')"
-              title="${assignedMember ? 'กำหนดให้: ' + assignedMember.displayName : 'ยังไม่ได้กำหนด — คลิกเพื่อกำหนด'}">
-              ${assignedMember ? `
-                <div class="mini-avatar" style="background:var(--accent-dim); color:var(--accent); border:1.5px solid rgba(245,166,35,0.4);">${initial}</div>
-                <span style="max-width:65px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(assignedMember.displayName)}</span>
-              ` : `<span style="color:var(--text-dim);">+ กำหนด</span>`}
-            </button>
-            <button class="btn btn--danger btn--icon item-delete"
-              style="width:26px; height:26px; font-size:12px; opacity:0; flex-shrink:0;"
-              data-del-item="${item.id}" data-del-cat="${cat.id}" title="ลบรายการ"
-              onclick="event.stopPropagation();">✕</button>
+      const itemsHtml = items.map(item => `
+        <div class="checklist-item ${item.done ? 'is-checked' : ''}">
+          <div style="width:16px; height:16px; border-radius:4px; flex-shrink:0; border:2px solid ${item.done ? 'var(--success)' : 'var(--border-light)'}; background:${item.done ? 'var(--success)' : 'transparent'}; display:flex; align-items:center; justify-content:center;">
+            ${item.done ? '<span style="color:#0d0d14; font-size:9px; font-weight:800; line-height:1;">✓</span>' : ''}
           </div>
-        `;
-      }).join('');
-
-      // Member options for the selector
-      const nonOwnerMembers = group.members.filter(m => !m.isOwner);
-      const memberOptions = nonOwnerMembers.length > 0
-        ? nonOwnerMembers.map(m => `<option value="${m.id}">${escapeHtml(m.displayName)}</option>`).join('')
-        : '<option value="" disabled>ยังไม่มีสมาชิก</option>';
+          <div class="item-text" style="flex:1; font-size:0.88rem;">${escapeHtml(item.text)}</div>
+          <button class="btn btn--icon item-delete"
+            style="width:24px; height:24px; font-size:11px; opacity:0; color:var(--danger); background:var(--danger-dim); border:1px solid rgba(240,82,82,0.2);"
+            data-del-member="${member.id}" data-del-item="${item.id}"
+            onclick="event.stopPropagation();">✕</button>
+        </div>
+      `).join('');
 
       return `
-        <div class="category-card" style="animation-delay:${ci * 0.06}s;">
+        <div class="category-card" style="animation-delay:${index * 0.06}s;">
           <div class="category-header">
-            <div class="category-header__left">
-              <div class="category-dot" style="background:${cat.color};"></div>
-              <div class="category-name">${escapeHtml(cat.name)}</div>
-              <div class="category-count">${cat.items.length} รายการ</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              ${cat.items.length > 0 ? `<span style="font-size:0.72rem; color:var(--text-dim);">${assignedCount}/${cat.items.length} กำหนดแล้ว</span>` : ''}
-              <div class="category-header__actions">
-                <button class="btn btn--danger btn--icon" style="width:28px; height:28px; font-size:13px;"
-                  onclick="openDeleteCategory('${cat.id}','${escapeHtml(cat.name)}')" title="ลบหมวดหมู่">🗑</button>
+            <div class="category-header__left" style="gap:12px;">
+              <div style="width:34px; height:34px; border-radius:50%; background:var(--accent-dim); border:2px solid rgba(245,166,35,0.3); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; color:var(--accent); flex-shrink:0;">${initial}</div>
+              <div>
+                <div class="category-name" style="font-size:1rem;">${escapeHtml(member.displayName)}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:1px;">${ms.done}/${ms.total} รายการ · ${pct}%</div>
               </div>
             </div>
+            <button class="btn btn--icon" style="width:28px; height:28px; font-size:12px; color:var(--danger); background:var(--danger-dim); border:1px solid rgba(240,82,82,0.2); opacity:0; transition:opacity var(--transition);"
+              onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0"
+              onclick="removeMember('${member.id}','${escapeHtml(member.displayName)}')"
+              title="นำสมาชิกออก">✕</button>
           </div>
+
+          ${ms.total > 0 ? `
+            <div style="padding:0 16px 2px;">
+              <div style="height:3px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
+                <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition:width 0.5s ease;"></div>
+              </div>
+            </div>
+          ` : ''}
+
           <div class="category-items">
             ${itemsHtml}
-            ${cat.items.length === 0
-              ? '<div style="padding:12px; text-align:center; color:var(--text-dim); font-size:0.82rem;">ยังไม่มีรายการ</div>'
+            ${items.length === 0
+              ? '<div style="padding:10px 12px; color:var(--text-dim); font-size:0.82rem; text-align:center;">ยังไม่มีรายการ</div>'
               : ''}
           </div>
+
           <div class="add-item-row">
-            <select class="member-select-inline" data-cat-id="${cat.id}">
-              <option value="">👤 เลือกสมาชิก</option>
-              ${memberOptions}
-            </select>
-            <input class="add-item-input" type="text" placeholder="พิมพ์รายการแล้วกด Enter..."
-              data-cat-id="${cat.id}" maxlength="120" />
+            <input class="add-item-input" type="text"
+              placeholder="+ พิมพ์รายการแล้วกด Enter..."
+              data-member-id="${member.id}" maxlength="120" />
           </div>
         </div>
       `;
     }
 
-    function attachOwnerItemEvents() {
-      document.querySelectorAll('.add-item-input').forEach(input => {
+    function attachMemberCardEvents() {
+      document.querySelectorAll('.add-item-input[data-member-id]').forEach(input => {
         input.addEventListener('keydown', async e => {
           if (e.key !== 'Enter') return;
           const text = input.value.trim();
-          const catId = input.dataset.catId;
           if (!text) return;
+          const memberId = input.dataset.memberId;
 
-          const select = document.querySelector(`.member-select-inline[data-cat-id="${catId}"]`);
-          const assignedTo = select ? (select.value || null) : null;
-
-          const result = await DB.addItem(groupId, myMemberId, catId, text, assignedTo);
+          const result = await DB.addMemberItem(groupId, myMemberId, memberId, text);
           if (result.success) {
             input.value = '';
             await reloadGroup();
-            renderTemplate();
-            renderMembersProgress();
+            renderMemberCards();
+            renderHero();
             setTimeout(() => {
-              const inp = document.querySelector(`.add-item-input[data-cat-id="${catId}"]`);
+              const inp = document.querySelector(`.add-item-input[data-member-id="${memberId}"]`);
               if (inp) inp.focus();
             }, 50);
           } else {
@@ -566,168 +461,19 @@
         });
       });
 
-      document.querySelectorAll('[data-del-item]').forEach(btn => {
+      document.querySelectorAll('[data-del-member]').forEach(btn => {
         btn.addEventListener('click', async e => {
           e.stopPropagation();
-          const result = await DB.deleteItem(groupId, myMemberId, btn.dataset.delCat, btn.dataset.delItem);
+          const result = await DB.deleteMemberItem(groupId, myMemberId, btn.dataset.delMember, btn.dataset.delItem);
           if (result.success) {
             await reloadGroup();
-            renderTemplate();
-            renderMembersProgress();
+            renderMemberCards();
+            renderHero();
           } else {
             Auth.showToast(result.error, 'error');
           }
         });
       });
-    }
-
-    // ── Assign Item ──────────────────────────────────────────
-    function openAssignModal(itemId, catId, itemText) {
-      pendingAssignItem = { itemId, catId };
-
-      document.getElementById('assignItemText').textContent = itemText || '';
-
-      // Find current assignee
-      const cat = group.categories.find(c => c.id === catId);
-      const item = cat?.items.find(i => i.id === itemId);
-      const currentAssigneeId = item?.assignedTo || null;
-
-      const nonOwnerMembers = group.members.filter(m => !m.isOwner);
-
-      const list = document.getElementById('assignMemberList');
-      list.innerHTML = `
-        <div class="assign-member-option ${!currentAssigneeId ? 'assign-member-option--active' : ''}"
-          onclick="confirmAssign(null)">
-          <div class="mini-avatar" style="background:var(--surface-3); color:var(--text-dim); border:1.5px solid var(--border);">−</div>
-          <span class="assign-member-option__name">ไม่กำหนด</span>
-          ${!currentAssigneeId ? '<span class="assign-member-option__badge">✓ ปัจจุบัน</span>' : ''}
-        </div>
-        ${nonOwnerMembers.length === 0
-          ? '<p style="text-align:center; color:var(--text-dim); font-size:0.85rem; padding:12px;">ยังไม่มีสมาชิกในกลุ่ม</p>'
-          : nonOwnerMembers.map(m => {
-              const isActive = m.id === currentAssigneeId;
-              const initial = m.displayName.charAt(0).toUpperCase();
-              return `
-                <div class="assign-member-option ${isActive ? 'assign-member-option--active' : ''}"
-                  onclick="confirmAssign('${m.id}')">
-                  <div class="mini-avatar" style="background:var(--accent-dim); color:var(--accent); border:1.5px solid rgba(245,166,35,0.4);">${initial}</div>
-                  <span class="assign-member-option__name">${escapeHtml(m.displayName)}</span>
-                  ${isActive ? '<span class="assign-member-option__badge">✓ ปัจจุบัน</span>' : ''}
-                </div>
-              `;
-            }).join('')
-        }
-      `;
-
-      openModal('modalAssignItem');
-    }
-
-    async function confirmAssign(memberId) {
-      if (!pendingAssignItem) return;
-      const { itemId, catId } = pendingAssignItem;
-
-      const result = await DB.assignItem(groupId, myMemberId, catId, itemId, memberId);
-      if (result.success) {
-        closeModal('modalAssignItem');
-        await reloadGroup();
-        renderTemplate();
-        renderMembersProgress();
-        const memberName = memberId
-          ? group.members.find(m => m.id === memberId)?.displayName
-          : null;
-        Auth.showToast(
-          memberName ? `กำหนดให้ ${memberName} แล้ว` : 'ยกเลิกการกำหนดแล้ว',
-          'success'
-        );
-      } else {
-        Auth.showToast(result.error, 'error');
-      }
-      pendingAssignItem = null;
-    }
-
-    // ── Members Progress ─────────────────────────────────────
-    function renderMembersProgress() {
-      const container = document.getElementById('membersProgressList');
-      const nonOwnerMembers = group.members.filter(m => !m.isOwner);
-      document.getElementById('memberCount').textContent = `(${nonOwnerMembers.length})`;
-
-      if (nonOwnerMembers.length === 0) {
-        container.innerHTML = `
-          <div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);">
-            <div style="font-size:2.5rem; margin-bottom:10px;">👥</div>
-            <p style="font-weight:600;">ยังไม่มีสมาชิก</p>
-            <p style="font-size:0.83rem; margin-top:4px; color:var(--text-dim);">แชร์ลิงก์เชิญให้เพื่อนเข้ากลุ่ม</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = nonOwnerMembers.map(member => {
-        const ms = DB.getMemberStats(group, member.id);
-        const pct = ms.total > 0 ? Math.round((ms.done / ms.total) * 100) : 0;
-        const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--purple)';
-        const initial = member.displayName.charAt(0).toUpperCase();
-
-        // Detail: items assigned to this member
-        const assignedItems = group.categories.flatMap(cat =>
-          cat.items
-            .filter(item => item.assignedTo === member.id)
-            .map(item => ({ ...item, catName: cat.name, catColor: cat.color }))
-        );
-
-        const detailHtml = assignedItems.length === 0
-          ? '<p style="font-size:0.83rem; color:var(--text-dim); padding:4px 0;">ยังไม่มีรายการที่กำหนดให้</p>'
-          : assignedItems.map(item => {
-              const checked = member.progress && member.progress[item.id];
-              return `
-                <div style="display:flex; align-items:center; gap:10px; padding:6px 0;">
-                  <div style="width:16px; height:16px; border-radius:4px; flex-shrink:0;
-                    background:${checked ? 'var(--success)' : 'var(--surface-3)'};
-                    border:2px solid ${checked ? 'var(--success)' : 'var(--border-light)'};
-                    display:flex; align-items:center; justify-content:center;">
-                    ${checked ? '<span style="color:#0d0d14; font-size:9px; font-weight:800;">✓</span>' : ''}
-                  </div>
-                  <span style="font-size:0.85rem; flex:1; ${checked ? 'text-decoration:line-through; color:var(--text-muted);' : ''}">${escapeHtml(item.text)}</span>
-                  <span style="font-size:0.72rem; color:var(--text-dim); background:var(--surface-2); padding:2px 7px; border-radius:99px; white-space:nowrap;">${escapeHtml(item.catName)}</span>
-                </div>
-              `;
-            }).join('');
-
-        return `
-          <div class="member-progress-card">
-            <div class="member-progress-header" onclick="toggleMemberDetail('${member.id}')">
-              <div style="width:38px; height:38px; border-radius:50%; background:var(--surface-3);
-                border:2px solid var(--border-light); display:flex; align-items:center; justify-content:center;
-                font-weight:700; font-size:0.95rem; color:var(--text); flex-shrink:0;">${initial}</div>
-              <div style="flex:1; min-width:0;">
-                <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px;">${escapeHtml(member.displayName)}</div>
-                <div style="height:5px; background:var(--surface-3); border-radius:99px; overflow:hidden;">
-                  <div style="height:100%; width:${pct}%; background:${color}; border-radius:99px; transition:width 0.5s ease;"></div>
-                </div>
-              </div>
-              <div style="text-align:right; flex-shrink:0; margin:0 8px;">
-                <div style="font-weight:700; font-size:0.95rem; color:${color};">${pct}%</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);">${ms.done}/${ms.total}</div>
-              </div>
-              <button class="btn btn--danger btn--sm" style="padding:4px 10px; font-size:0.72rem; flex-shrink:0;"
-                onclick="event.stopPropagation(); removeMember('${member.id}','${escapeHtml(member.displayName)}')"
-                title="นำออก">✕</button>
-              <span id="arrow_${member.id}" style="color:var(--text-muted); font-size:0.78rem; flex-shrink:0; margin-left:4px;">▼</span>
-            </div>
-            <div id="detail_${member.id}" style="display:none;">
-              <div class="member-progress-detail">${detailHtml}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function toggleMemberDetail(memberId) {
-      const detail = document.getElementById(`detail_${memberId}`);
-      const arrow = document.getElementById(`arrow_${memberId}`);
-      const isOpen = detail.style.display !== 'none';
-      detail.style.display = isOpen ? 'none' : '';
-      arrow.textContent = isOpen ? '▼' : '▲';
     }
 
     async function removeMember(memberId, displayName) {
@@ -737,7 +483,7 @@
         Auth.showToast('นำสมาชิกออกแล้ว', 'success');
         await reloadGroup();
         renderHero();
-        renderMembersProgress();
+        renderMemberCards();
       } else {
         Auth.showToast(result.error, 'error');
       }
@@ -758,7 +504,6 @@
       const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--purple)';
 
       document.getElementById('memberGreetName').textContent = myMember.displayName;
-
       document.getElementById('memberProgressBar').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span style="font-size:0.83rem; color:var(--text-muted);">รายการของคุณ</span>
@@ -771,85 +516,55 @@
           ? '<div style="text-align:center; margin-top:10px; font-size:0.88rem; color:var(--success);">🎉 ครบทุกรายการแล้ว!</div>'
           : ''}
         ${ms.total === 0
-          ? '<div style="text-align:center; margin-top:10px; font-size:0.83rem; color:var(--text-dim);">รอเจ้าของกลุ่มกำหนดรายการให้คุณ...</div>'
+          ? '<div style="text-align:center; margin-top:10px; font-size:0.83rem; color:var(--text-dim);">รอเจ้าของกลุ่มเพิ่มรายการให้คุณ...</div>'
           : ''}
       `;
     }
 
     function renderMemberChecklist() {
       if (!myMember) return;
-      const progress = myMember.progress || {};
       const container = document.getElementById('memberChecklist');
+      const items = Array.isArray(myMember.items) ? myMember.items : [];
 
-      if (group.categories.length === 0) {
+      if (items.length === 0) {
         container.innerHTML = `
-          <div style="text-align:center; padding:60px 24px; color:var(--text-muted);">
+          <div style="text-align:center; padding:48px 24px; color:var(--text-muted);">
             <div style="font-size:3rem; margin-bottom:12px;">📋</div>
-            <p>รอเจ้าของกลุ่มเพิ่มรายการ...</p>
+            <p style="font-weight:600; margin-bottom:6px;">ยังไม่มีรายการ</p>
+            <p style="font-size:0.83rem; color:var(--text-dim);">รอเจ้าของกลุ่มเพิ่มรายการให้คุณ</p>
           </div>
         `;
         return;
       }
 
-      const catHtml = group.categories.map((cat, ci) => {
-        // Only items assigned to this member
-        const catItems = cat.items.filter(item => item.assignedTo === myMemberId);
-        if (catItems.length === 0) return '';
+      const itemsHtml = items.map(item => `
+        <div class="checklist-item ${item.done ? 'is-checked' : ''}" style="cursor:pointer;"
+          onclick="toggleMyItem('${item.id}')">
+          <input type="checkbox" class="item-checkbox" ${item.done ? 'checked' : ''}
+            onclick="event.stopPropagation(); toggleMyItem('${item.id}')" />
+          <div class="item-text">${escapeHtml(item.text)}</div>
+        </div>
+      `).join('');
 
-        const checkedCount = catItems.filter(i => progress[i.id]).length;
-        const catPct = Math.round((checkedCount / catItems.length) * 100);
-
-        const itemsHtml = catItems.map(item => {
-          const checked = !!progress[item.id];
-          return `
-            <div class="checklist-item ${checked ? 'is-checked' : ''}" style="cursor:pointer;"
-              onclick="toggleMyItem('${item.id}')">
-              <input type="checkbox" class="item-checkbox" ${checked ? 'checked' : ''}
-                onclick="event.stopPropagation(); toggleMyItem('${item.id}')" />
-              <div class="item-text">${escapeHtml(item.text)}</div>
+      container.innerHTML = `
+        <div class="card" style="padding:0; overflow:hidden; animation: fadeUp 0.3s ease;">
+          <div class="category-header">
+            <div class="category-header__left">
+              <div class="category-name">รายการของฉัน</div>
+              <div class="category-count">${items.filter(i => i.done).length}/${items.length}</div>
             </div>
-          `;
-        }).join('');
-
-        return `
-          <div class="card" style="margin-bottom:14px; padding:0; overflow:hidden; animation: fadeUp 0.3s ease both; animation-delay:${ci * 0.06}s;">
-            <div class="category-header">
-              <div class="category-header__left">
-                <div class="category-dot" style="background:${cat.color};"></div>
-                <div class="category-name">${escapeHtml(cat.name)}</div>
-                <div class="category-count">${checkedCount}/${catItems.length}</div>
-              </div>
-              <div style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">${catPct}%</div>
-            </div>
-            <div class="category-items">${itemsHtml}</div>
           </div>
-        `;
-      }).filter(Boolean).join('');
-
-      if (!catHtml) {
-        container.innerHTML = `
-          <div style="text-align:center; padding:60px 24px; color:var(--text-muted);">
-            <div style="font-size:3rem; margin-bottom:12px;">📋</div>
-            <p style="font-weight:600; margin-bottom:6px;">ยังไม่มีรายการที่กำหนดให้คุณ</p>
-            <p style="font-size:0.83rem; color:var(--text-dim);">รอเจ้าของกลุ่มกำหนดรายการให้</p>
-          </div>
-        `;
-        return;
-      }
-      container.innerHTML = catHtml;
+          <div class="category-items">${itemsHtml}</div>
+        </div>
+      `;
     }
 
     async function toggleMyItem(itemId) {
-      const result = await DB.toggleItem(groupId, myMemberId, itemId);
+      const result = await DB.toggleMemberItem(groupId, myMemberId, itemId);
       if (result.success) {
         await reloadGroup();
-        if (isOwner) {
-          renderTemplate();
-          renderMembersProgress();
-        } else {
-          renderMemberHeader();
-          renderMemberChecklist();
-        }
+        renderMemberHeader();
+        renderMemberChecklist();
         renderHero();
       } else {
         Auth.showToast(result.error, 'error');
@@ -881,74 +596,18 @@
       }
     }
 
-    // ── Category Modals ──────────────────────────────────────
+    // ── Modals ────────────────────────────────────────────────
     function openModal(id) {
       document.getElementById(id).style.display = 'flex';
-      if (id === 'modalAddCat') setTimeout(() => document.getElementById('newCatName').focus(), 100);
     }
 
     function closeModal(id) {
       document.getElementById(id).style.display = 'none';
-      if (id === 'modalAddCat') {
-        document.getElementById('newCatName').value = '';
-        document.getElementById('catNameError').style.display = 'none';
-      }
-      if (id === 'modalAssignItem') pendingAssignItem = null;
     }
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
     });
-
-    document.getElementById('newCatName').addEventListener('keydown', e => {
-      if (e.key === 'Enter') submitAddCategory();
-    });
-
-    async function submitAddCategory() {
-      const name = document.getElementById('newCatName').value.trim();
-      const color = document.getElementById('newCatColor').value;
-      const errEl = document.getElementById('catNameError');
-
-      if (!name) {
-        errEl.textContent = 'กรุณากรอกชื่อหมวดหมู่';
-        errEl.style.display = 'flex';
-        return;
-      }
-      errEl.style.display = 'none';
-
-      const result = await DB.addCategory(groupId, myMemberId, { name, color });
-      if (result.success) {
-        closeModal('modalAddCat');
-        await reloadGroup();
-        renderHero();
-        renderTemplate();
-        Auth.showToast(`เพิ่ม "${name}" แล้ว!`, 'success');
-      } else {
-        Auth.showToast(result.error, 'error');
-      }
-    }
-
-    function openDeleteCategory(catId, catName) {
-      pendingDelCatId = catId;
-      document.getElementById('delCatName').textContent = catName;
-      openModal('modalDelCat');
-    }
-
-    async function confirmDeleteCategory() {
-      if (!pendingDelCatId) return;
-      const result = await DB.deleteCategory(groupId, myMemberId, pendingDelCatId);
-      if (result.success) {
-        closeModal('modalDelCat');
-        await reloadGroup();
-        renderHero();
-        renderTemplate();
-        renderMembersProgress();
-        Auth.showToast('ลบหมวดหมู่แล้ว', 'success');
-      } else {
-        Auth.showToast(result.error, 'error');
-      }
-      pendingDelCatId = null;
-    }
 
     async function confirmDeleteGroup() {
       const result = await DB.deleteGroup(groupId, myMemberId);
@@ -961,39 +620,15 @@
       }
     }
 
-    // ── Color Picker ─────────────────────────────────────────
-    function setupCatColorPicker() {
-      const picker = document.getElementById('catColorPicker');
-      picker.innerHTML = '';
-      COLORS.forEach((c, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'color-dot' + (i === 0 ? ' active' : '');
-        dot.style.background = c;
-        dot.title = c;
-        dot.addEventListener('click', () => {
-          document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-          dot.classList.add('active');
-          document.getElementById('newCatColor').value = c;
-        });
-        picker.appendChild(dot);
-      });
-    }
-
-    // ── Auto-refresh on focus ─────────────────────────────────
+    // ── Auto-refresh ──────────────────────────────────────────
     window.addEventListener('focus', async () => {
       if (!group) return;
       await reloadGroup();
       renderHero();
-      if (isOwner) {
-        renderTemplate();
-        renderMembersProgress();
-      } else {
-        renderMemberHeader();
-        renderMemberChecklist();
-      }
+      if (isOwner) renderMemberCards();
+      else { renderMemberHeader(); renderMemberChecklist(); }
     });
 
-    // Enter key on join name input
     document.getElementById('joinName').addEventListener('keydown', e => {
       if (e.key === 'Enter') handleJoin();
     });

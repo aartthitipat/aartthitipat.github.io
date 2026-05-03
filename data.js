@@ -417,36 +417,80 @@ const DB = {
     const member = group.members.find(m => m.id === memberId);
     if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
 
+    if (Array.isArray(member.items)) member.items.forEach(i => { i.done = false; });
     member.progress = {};
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true };
   },
 
-  async assignItem(groupId, userId, categoryId, itemId, memberId) {
+  // ── New per-member item model ────────────────────────
+  async addMemberItem(groupId, ownerId, memberId, text) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
-    const isAdmin = await this.isAdminId(userId);
-    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+    const isAdmin = await this.isAdminId(ownerId);
+    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
 
-    const cat = group.categories.find(c => c.id === categoryId);
-    if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
-    const item = cat.items.find(i => i.id === itemId);
-    if (!item) return { success: false, error: 'ไม่พบรายการ' };
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
 
-    item.assignedTo = memberId || null;
+    if (!Array.isArray(member.items)) member.items = [];
+    const item = { id: this.generateId(), text, done: false, createdAt: new Date().toISOString() };
+    member.items.push(item);
+
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true, item };
+  },
+
+  async deleteMemberItem(groupId, ownerId, memberId, itemId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+    const isAdmin = await this.isAdminId(ownerId);
+    if (group.ownerId !== ownerId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+
+    if (Array.isArray(member.items)) {
+      member.items = member.items.filter(i => i.id !== itemId);
+    }
     const success = await this.updateGroupData(group);
     if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
     return { success: true };
   },
 
-  // สถิติของสมาชิกคนเดียว (นับเฉพาะรายการที่ assigned ให้สมาชิกคนนั้น)
+  async toggleMemberItem(groupId, memberId, itemId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) return { success: false, error: 'ไม่พบสมาชิก' };
+
+    if (Array.isArray(member.items)) {
+      const item = member.items.find(i => i.id === itemId);
+      if (item) { item.done = !item.done; }
+    }
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
+  },
+
   getMemberStats(group, memberId) {
     const member = group.members.find(m => m.id === memberId);
-    const progress = member?.progress || {};
+    if (!member) return { total: 0, done: 0 };
     let total = 0, done = 0;
-    group.categories.forEach(cat => {
-      cat.items.forEach(item => {
+
+    // New model: member.items
+    if (Array.isArray(member.items) && member.items.length > 0) {
+      total += member.items.length;
+      done += member.items.filter(i => i.done).length;
+    }
+
+    // Old model: items assigned via category
+    const progress = member.progress || {};
+    (group.categories || []).forEach(cat => {
+      (cat.items || []).forEach(item => {
         if (item.assignedTo === memberId) {
           total++;
           if (progress[item.id]) done++;
@@ -456,11 +500,16 @@ const DB = {
     return { total, done };
   },
 
-  // สถิติ template (จำนวน items ทั้งหมด + จำนวนสมาชิก)
   getGroupStats(group) {
     let total = 0;
-    group.categories.forEach(c => { total += c.items.length; });
-    return { total, memberCount: group.members.length };
+    // New model
+    group.members.forEach(m => { if (Array.isArray(m.items)) total += m.items.length; });
+    // Old model fallback
+    if (total === 0) {
+      (group.categories || []).forEach(c => { total += (c.items || []).length; });
+    }
+    const memberCount = group.members.filter(m => !m.isOwner).length;
+    return { total, memberCount };
   },
 
   async isAdminId(userId) {
