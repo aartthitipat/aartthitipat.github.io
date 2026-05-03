@@ -508,8 +508,7 @@ const DB = {
     if (total === 0) {
       (group.categories || []).forEach(c => { total += (c.items || []).length; });
     }
-    const memberCount = group.members.filter(m => !m.isOwner).length;
-    return { total, memberCount };
+    return { total, memberCount: group.members.length };
   },
 
   async isAdminId(userId) {

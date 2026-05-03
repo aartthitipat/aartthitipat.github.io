@@ -358,11 +358,11 @@
     }
 
     function renderMemberCards() {
-      const nonOwners = group.members.filter(m => !m.isOwner);
-      document.getElementById('memberCount').textContent = `(${nonOwners.length})`;
+      const allMembers = group.members;
+      document.getElementById('memberCount').textContent = `(${allMembers.length})`;
       const grid = document.getElementById('ownerMemberGrid');
 
-      if (nonOwners.length === 0) {
+      if (allMembers.length === 0) {
         grid.innerHTML = `
           <div class="empty-state" style="grid-column:1/-1;">
             <div class="empty-state__icon">👥</div>
@@ -373,7 +373,7 @@
         return;
       }
 
-      grid.innerHTML = nonOwners.map((member, i) => renderMemberCard(member, i)).join('');
+      grid.innerHTML = allMembers.map((member, i) => renderMemberCard(member, i)).join('');
       attachMemberCardEvents();
     }
 
@@ -385,7 +385,8 @@
       const initial = member.displayName.charAt(0).toUpperCase();
 
       const itemsHtml = items.map(item => `
-        <div class="checklist-item ${item.done ? 'is-checked' : ''}">
+        <div class="checklist-item ${item.done ? 'is-checked' : ''}" style="cursor:pointer;"
+          onclick="toggleOwnerItem('${member.id}','${item.id}')">
           <div style="width:16px; height:16px; border-radius:4px; flex-shrink:0; border:2px solid ${item.done ? 'var(--success)' : 'var(--border-light)'}; background:${item.done ? 'var(--success)' : 'transparent'}; display:flex; align-items:center; justify-content:center;">
             ${item.done ? '<span style="color:#0d0d14; font-size:9px; font-weight:800; line-height:1;">✓</span>' : ''}
           </div>
@@ -407,10 +408,12 @@
                 <div style="font-size:0.72rem; color:var(--text-muted); margin-top:1px;">${ms.done}/${ms.total} รายการ · ${pct}%</div>
               </div>
             </div>
-            <button class="btn btn--icon" style="width:28px; height:28px; font-size:12px; color:var(--danger); background:var(--danger-dim); border:1px solid rgba(240,82,82,0.2); opacity:0; transition:opacity var(--transition);"
-              onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0"
-              onclick="removeMember('${member.id}','${escapeHtml(member.displayName)}')"
-              title="นำสมาชิกออก">✕</button>
+            ${member.id !== myMemberId ? `
+              <button class="btn btn--icon" style="width:28px; height:28px; font-size:12px; color:var(--danger); background:var(--danger-dim); border:1px solid rgba(240,82,82,0.2); opacity:0; transition:opacity var(--transition);"
+                onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0"
+                onclick="removeMember('${member.id}','${escapeHtml(member.displayName)}')"
+                title="นำสมาชิกออก">✕</button>
+            ` : `<div style="width:28px;"></div>`}
           </div>
 
           ${ms.total > 0 ? `
@@ -474,6 +477,17 @@
           }
         });
       });
+    }
+
+    async function toggleOwnerItem(memberId, itemId) {
+      const result = await DB.toggleMemberItem(groupId, memberId, itemId);
+      if (result.success) {
+        await reloadGroup();
+        renderMemberCards();
+        renderHero();
+      } else {
+        Auth.showToast(result.error, 'error');
+      }
     }
 
     async function removeMember(memberId, displayName) {
