@@ -352,7 +352,7 @@ const DB = {
   },
 
   // ─── Items ───────────────────────────────────────────
-  async addItem(groupId, userId, categoryId, text) {
+  async addItem(groupId, userId, categoryId, text, assignedTo = null) {
     const group = await this.findGroupById(groupId);
     if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
     const isAdmin = await this.isAdminId(userId);
@@ -364,6 +364,7 @@ const DB = {
     const item = {
       id: this.generateId(),
       text,
+      assignedTo: assignedTo || null,
       createdAt: new Date().toISOString(),
     };
     cat.items.push(item);
@@ -422,15 +423,31 @@ const DB = {
     return { success: true };
   },
 
-  // สถิติของสมาชิกคนเดียว (นับเฉพาะ selectedItems ถ้ามี)
+  async assignItem(groupId, userId, categoryId, itemId, memberId) {
+    const group = await this.findGroupById(groupId);
+    if (!group) return { success: false, error: 'ไม่พบกลุ่ม' };
+    const isAdmin = await this.isAdminId(userId);
+    if (group.ownerId !== userId && !isAdmin) return { success: false, error: 'เฉพาะเจ้าของเท่านั้น' };
+
+    const cat = group.categories.find(c => c.id === categoryId);
+    if (!cat) return { success: false, error: 'ไม่พบหมวดหมู่' };
+    const item = cat.items.find(i => i.id === itemId);
+    if (!item) return { success: false, error: 'ไม่พบรายการ' };
+
+    item.assignedTo = memberId || null;
+    const success = await this.updateGroupData(group);
+    if (!success) return { success: false, error: 'เกิดข้อผิดพลาด' };
+    return { success: true };
+  },
+
+  // สถิติของสมาชิกคนเดียว (นับเฉพาะรายการที่ assigned ให้สมาชิกคนนั้น)
   getMemberStats(group, memberId) {
     const member = group.members.find(m => m.id === memberId);
     const progress = member?.progress || {};
-    const selectedItems = Array.isArray(member?.selectedItems) ? member.selectedItems : null;
     let total = 0, done = 0;
     group.categories.forEach(cat => {
       cat.items.forEach(item => {
-        if (selectedItems === null || selectedItems.includes(item.id)) {
+        if (item.assignedTo === memberId) {
           total++;
           if (progress[item.id]) done++;
         }
