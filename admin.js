@@ -116,6 +116,10 @@ function renderAdminList() {
           <button class="btn-save-amt" onclick="saveAmount(${m.id}, this.parentElement)">
             บันทึก
           </button>
+          <button class="btn-reset-amt" onclick="resetAmount(${m.id}, this.parentElement)"
+                  title="รีเซ็ตจำนวนเงิน">
+            ×
+          </button>
         </div>
 
         ${m.paid && m.paid_at
@@ -162,6 +166,34 @@ async function saveAmount(id, amtRow) {
   btn.textContent = '✓ บันทึกแล้ว';
   setTimeout(() => { btn.textContent = 'บันทึก'; }, 2000);
   toast(`✓ บันทึก ฿${val.toLocaleString()} เรียบร้อย`);
+}
+
+/* ─────────── RESET AMOUNT ─────────── */
+async function resetAmount(id, amtRow) {
+  const input = amtRow.querySelector('.amt-input');
+  const btn   = amtRow.querySelector('.btn-reset-amt');
+
+  btn.disabled = true;
+
+  const { error } = await sb
+    .from('members')
+    .update({ amount_paid: 0 })
+    .eq('id', id);
+
+  btn.disabled = false;
+
+  if (error) {
+    toast('❌ รีเซ็ตไม่สำเร็จ: ' + error.message);
+    return;
+  }
+
+  input.value = '';
+
+  const idx = members.findIndex(m => m.id === id);
+  if (idx !== -1) members[idx].amount_paid = 0;
+
+  renderStats();
+  toast('รีเซ็ตจำนวนเงินแล้ว');
 }
 
 /* ─────────── QR UPLOAD ─────────── */

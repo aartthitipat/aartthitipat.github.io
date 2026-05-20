@@ -604,6 +604,24 @@ a      { text-decoration: none; color: inherit; }
 .btn-save-amt:hover    { background: var(--border); }
 .btn-save-amt:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.btn-reset-amt {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-reset-amt:hover    { background: rgba(220,38,38,.1); border-color: var(--red); color: var(--red); }
+.btn-reset-amt:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ══════════════
    TOAST
 ══════════════ */
