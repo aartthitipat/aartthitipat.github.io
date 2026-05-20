@@ -116,9 +116,9 @@ function renderAdminList() {
           <button class="btn-save-amt" onclick="saveAmount(${m.id}, this.parentElement)">
             บันทึก
           </button>
-          <button class="btn-reset-amt" onclick="resetAmount(${m.id}, this.parentElement)"
-                  title="รีเซ็ตจำนวนเงิน">
-            ×
+          <button class="btn-reset-amt" onclick="resetPaid(${m.id})"
+                  title="รีเซ็ตสถานะ → ยังไม่โอน">
+            ↺
           </button>
         </div>
 
@@ -168,32 +168,34 @@ async function saveAmount(id, amtRow) {
   toast(`✓ บันทึก ฿${val.toLocaleString()} เรียบร้อย`);
 }
 
-/* ─────────── RESET AMOUNT ─────────── */
-async function resetAmount(id, amtRow) {
-  const input = amtRow.querySelector('.amt-input');
-  const btn   = amtRow.querySelector('.btn-reset-amt');
+/* ─────────── RESET PAID STATUS ─────────── */
+async function resetPaid(id) {
+  const row = document.querySelector(`.admin-row[data-id="${id}"]`);
+  const btn = row?.querySelector('.btn-reset-amt');
 
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
 
   const { error } = await sb
     .from('members')
-    .update({ amount_paid: 0 })
+    .update({ paid: false, paid_at: null })
     .eq('id', id);
 
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
 
   if (error) {
     toast('❌ รีเซ็ตไม่สำเร็จ: ' + error.message);
     return;
   }
 
-  input.value = '';
-
   const idx = members.findIndex(m => m.id === id);
-  if (idx !== -1) members[idx].amount_paid = 0;
+  if (idx !== -1) {
+    members[idx].paid    = false;
+    members[idx].paid_at = null;
+  }
 
+  updateRow(id);
   renderStats();
-  toast('รีเซ็ตจำนวนเงินแล้ว');
+  toast('↺ รีเซ็ตสถานะเป็นยังไม่โอนแล้ว');
 }
 
 /* ─────────── QR UPLOAD ─────────── */
