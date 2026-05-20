@@ -158,10 +158,11 @@ async function saveAmount(id, amtRow) {
   }
 
   /* อัปเดต local state */
-  const idx = members.findIndex(m => m.id === id);
+  const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) members[idx].amount_paid = val;
 
-  /* อัปเดต stats เฉพาะ ไม่ต้อง re-render ทั้งหมด */
+  /* อัปเดต pill ให้แสดงยอดใหม่ทันที + อัปเดต stats */
+  updateRow(id);
   renderStats();
 
   btn.disabled    = false;
