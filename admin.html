@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — ระบบเก็บเงินห้อง</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <span class="header-title">Admin Panel</span>
+    <div class="header-right">
+      <button class="btn-sm" id="themeBtn">🌙 Dark</button>
+      <a class="btn-sm" href="index.html">← หน้าหลัก</a>
+    </div>
+  </header>
+
+  <!-- ═══ LOGIN ═══ -->
+  <div id="loginSection">
+    <div class="wrap">
+      <div class="login-card">
+        <h2>Admin Login</h2>
+        <div class="field">
+          <label>Username</label>
+          <input id="inUser" type="text" placeholder="admin"
+                 autocomplete="off" autocapitalize="none" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="inPass" type="password" placeholder="••••••" />
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:4px" id="loginBtn">
+          เข้าสู่ระบบ
+        </button>
+        <div class="login-err" id="loginErr"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="dashSection" style="display:none">
+    <div class="wrap">
+
+      <!-- Top bar -->
+      <div class="admin-bar">
+        <h2>แดชบอร์ด</h2>
+        <button class="btn-sm" id="logoutBtn">ออกจากระบบ</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-val" id="adTotal">—</div>
+          <div class="stat-lbl">ทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val green" id="adPaid">—</div>
+          <div class="stat-lbl">โอนแล้ว</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val green" id="adSum"
+               style="font-size:22px;letter-spacing:-1px">฿0</div>
+          <div class="stat-lbl">ยอดรวม</div>
+        </div>
+      </div>
+
+      <!-- ═══ QR UPLOAD SECTION ═══ -->
+      <div class="qr-upload-card">
+        <div class="sec-lbl" style="margin-bottom:14px">QR Code สำหรับชำระเงิน</div>
+
+        <!-- Preview -->
+        <div class="qr-preview-box">
+          <img id="qrPreview" src="" alt="QR Code" style="display:none" />
+          <div id="qrNone" class="qr-none-msg">
+            <span style="font-size:32px">📷</span>
+            <span>ยังไม่มี QR Code</span>
+          </div>
+        </div>
+
+        <!-- Upload button -->
+        <label class="btn-upload" id="uploadLabel" for="qrInput">
+          ↑ อัปโหลด QR Code
+        </label>
+        <input type="file" id="qrInput" accept="image/*" style="display:none" />
+        <p class="upload-hint">รองรับ JPG, PNG, WEBP · ขนาดไม่เกิน 2MB</p>
+      </div>
+
+      <!-- รายชื่อ -->
+      <div class="sec-lbl">
+        <span class="live-dot"></span>
+        สถานะการชำระเงิน
+      </div>
+      <div id="adminList">
+        <div class="loading-wrap"><div class="spinner"></div>กำลังโหลด…</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div class="toast-wrap" id="toastWrap">
+    <div class="toast-inner" id="toastMsg"></div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
