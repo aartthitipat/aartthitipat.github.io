@@ -399,6 +399,38 @@ a      { text-decoration: none; color: inherit; }
   text-align: center;
 }
 
+/* input จำนวนเงินใน modal (index.html) */
+.modal-amt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-amt-prefix {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.modal-amt-input {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, background 0.25s;
+  -moz-appearance: textfield;
+}
+.modal-amt-input::-webkit-outer-spin-button,
+.modal-amt-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.modal-amt-input:focus { border-color: var(--accent); }
+
 .paid-box {
   padding: 14px;
   border-radius: var(--radius);

@@ -128,7 +128,9 @@ function renderAdminList() {
       </div>
 
       <span class="pill ${m.paid ? 'paid' : 'pending'}">
-        ${m.paid ? '✓ โอนแล้ว' : 'รอโอน'}
+        ${m.paid
+          ? '✓ โอนแล้ว' + (m.amount_paid > 0 ? ' ฿' + m.amount_paid.toLocaleString() : '')
+          : 'รอโอน'}
       </span>
     </div>
   `).join('');
@@ -303,7 +305,9 @@ function updateRow(id) {
 
   const pill = row.querySelector('.pill');
   pill.className   = `pill ${m.paid ? 'paid' : 'pending'}`;
-  pill.textContent = m.paid ? '✓ โอนแล้ว' : 'รอโอน';
+  pill.textContent = m.paid
+    ? '✓ โอนแล้ว' + (m.amount_paid > 0 ? ' ฿' + m.amount_paid.toLocaleString() : '')
+    : 'รอโอน';
 
   /* อัปเดตเวลาที่ยืนยัน */
   let timeEl = row.querySelector('.m-time');

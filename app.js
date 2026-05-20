@@ -94,7 +94,7 @@ function openModal(id) {
     document.getElementById('qrNoImg').style.display = 'flex';
   }
 
-  setModalAction(m.paid);
+  setModalAction(m.paid, m.amount_paid);
   document.getElementById('qrOverlay').classList.add('show');
 }
 
@@ -103,29 +103,40 @@ function closeModal() {
   activeMid = null;
 }
 
-function setModalAction(isPaid) {
+function setModalAction(isPaid, amountPaid) {
   const el = document.getElementById('modalAction');
   if (isPaid) {
     el.innerHTML = `<div class="paid-box">✓ ยืนยันการโอนเรียบร้อยแล้ว</div>`;
   } else {
     el.innerHTML = `
-      <button class="btn-primary" style="width:100%" id="payBtn">
+      <div class="modal-amt-row">
+        <span class="modal-amt-prefix">฿</span>
+        <input class="modal-amt-input" id="modalAmtInput"
+               type="number" min="0" placeholder="จำนวนเงินที่โอน" />
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:10px" id="payBtn">
         ✓ ยืนยันว่าโอนแล้ว
       </button>`;
+    document.getElementById('modalAmtInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmPayment();
+    });
     document.getElementById('payBtn').addEventListener('click', confirmPayment);
   }
 }
 
 /* ─────────── CONFIRM PAYMENT ─────────── */
 async function confirmPayment() {
-  const btn = document.getElementById('payBtn');
+  const btn      = document.getElementById('payBtn');
+  const amtInput = document.getElementById('modalAmtInput');
+  const amtPaid  = parseInt(amtInput?.value) || 0;
+
   btn.disabled    = true;
   btn.textContent = 'กำลังบันทึก…';
 
   const now = new Date().toISOString();
   const { error } = await sb
     .from('members')
-    .update({ paid: true, paid_at: now })
+    .update({ paid: true, paid_at: now, amount_paid: amtPaid })
     .eq('id', activeMid);
 
   if (error) {
@@ -136,7 +147,7 @@ async function confirmPayment() {
   }
 
   const idx = members.findIndex(m => m.id === activeMid);
-  if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; }
+  if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; members[idx].amount_paid = amtPaid; }
 
   renderMembers();
   setModalAction(true);
