@@ -85,7 +85,7 @@ async function loadAll() {
 /* ─────────── RENDER STATS ─────────── */
 function renderStats() {
   const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.filter(m => m.paid).reduce((s, m) => s + (m.amount_paid || 0), 0);
+  const sumAmt = members.reduce((s, m) => s + (m.amount_paid || 0), 0);
 
   document.getElementById('adTotal').textContent = members.length;
   document.getElementById('adPaid').textContent  = paid;
