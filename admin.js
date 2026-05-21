@@ -187,7 +187,7 @@ async function resetPaid(id) {
 
   const { error } = await sb
     .from('members')
-    .update({ paid: false, paid_at: null, amount_paid: 0 })
+    .update({ paid: false, paid_at: null })
     .eq('id', id);
 
   if (btn) btn.disabled = false;
@@ -199,14 +199,9 @@ async function resetPaid(id) {
 
   const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) {
-    members[idx].paid        = false;
-    members[idx].paid_at     = null;
-    members[idx].amount_paid = 0;
+    members[idx].paid    = false;
+    members[idx].paid_at = null;
   }
-
-  /* ล้างค่า input ในหน้าจอด้วย */
-  const amtInput = document.querySelector(`.admin-row[data-id="${id}"] .amt-input`);
-  if (amtInput) amtInput.value = '';
 
   updateRow(id);
   renderStats();
