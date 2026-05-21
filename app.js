@@ -46,7 +46,7 @@ async function loadAll() {
 /* ─────────── RENDER รายชื่อ ─────────── */
 function renderMembers() {
   const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.reduce((s, m) => s + (m.amount_paid || 0), 0);
+  const sumAmt = members.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
 
   document.getElementById('stTotal').textContent = members.length;
   document.getElementById('stPaid').textContent  = paid;

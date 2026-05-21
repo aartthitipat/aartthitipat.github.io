@@ -82,10 +82,13 @@ async function loadAll() {
   renderQRPreview(settingsRes.data?.qr_url || null);
 }
 
-/* ─────────── RENDER STATS ─────────── */
-function renderStats() {
-  const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.reduce((s, m) => s + (m.amount_paid || 0), 0);
+/* ─────────── RENDER STATS (ดึงจาก DB โดยตรง) ─────────── */
+async function renderStats() {
+  const { data } = await sb.from('members').select('paid, amount_paid');
+  if (!data) return;
+
+  const paid   = data.filter(m => m.paid).length;
+  const sumAmt = data.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
 
   document.getElementById('adTotal').textContent = members.length;
   document.getElementById('adPaid').textContent  = paid;
@@ -140,7 +143,12 @@ function renderAdminList() {
 async function saveAmount(id, amtRow) {
   const input = amtRow.querySelector('.amt-input');
   const btn   = amtRow.querySelector('.btn-save-amt');
-  const val   = parseInt(input.value) || 0;
+  const val   = parseInt(input.value);
+
+  if (!val || val <= 0) {
+    toast('⚠ กรุณาใส่จำนวนเงินก่อนกดบันทึก');
+    return;
+  }
 
   btn.disabled    = true;
   btn.textContent = '…';
