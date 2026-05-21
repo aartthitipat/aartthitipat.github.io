@@ -45,11 +45,13 @@ async function loadAll() {
 
 /* ─────────── RENDER รายชื่อ ─────────── */
 function renderMembers() {
-  const paid = members.filter(m => m.paid).length;
+  const paid   = members.filter(m => m.paid).length;
+  const sumAmt = members.filter(m => m.paid).reduce((s, m) => s + (m.amount_paid || 0), 0);
 
   document.getElementById('stTotal').textContent = members.length;
   document.getElementById('stPaid').textContent  = paid;
   document.getElementById('stLeft').textContent  = members.length - paid;
+  document.getElementById('stSum').textContent   = '฿' + sumAmt.toLocaleString();
 
   document.getElementById('memberList').innerHTML = members.map(m => `
     <div class="member-row" onclick="openModal(${m.id})">

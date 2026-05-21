@@ -140,7 +140,31 @@ a      { text-decoration: none; color: inherit; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sum-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
   margin-bottom: 28px;
+  transition: background 0.25s, border-color 0.25s;
+}
+.sum-banner-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.sum-banner-val {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -1px;
 }
 
 .stat-card {
