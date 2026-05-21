@@ -3,6 +3,7 @@
    ════════════════════════════════════════ */
 
 let members = [];
+const recentlyUpdated = new Set(); // ป้องกัน Realtime overwrite ค่าที่เพิ่งเซฟ
 
 /* ─────────── INIT ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,13 +83,10 @@ async function loadAll() {
   renderQRPreview(settingsRes.data?.qr_url || null);
 }
 
-/* ─────────── RENDER STATS (ดึงจาก DB โดยตรง) ─────────── */
-async function renderStats() {
-  const { data } = await sb.from('members').select('paid, amount_paid');
-  if (!data) return;
-
-  const paid   = data.filter(m => m.paid).length;
-  const sumAmt = data.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
+/* ─────────── RENDER STATS ─────────── */
+function renderStats() {
+  const paid   = members.filter(m => m.paid).length;
+  const sumAmt = members.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
 
   document.getElementById('adTotal').textContent = members.length;
   document.getElementById('adPaid').textContent  = paid;
@@ -153,6 +151,9 @@ async function saveAmount(id, amtRow) {
   btn.disabled    = true;
   btn.textContent = '…';
 
+  recentlyUpdated.add(Number(id));
+  setTimeout(() => recentlyUpdated.delete(Number(id)), 5000);
+
   const now    = new Date().toISOString();
   const setPaid = val > 0;
 
@@ -192,6 +193,9 @@ async function resetPaid(id) {
   const btn = row?.querySelector('.btn-reset-amt');
 
   if (btn) btn.disabled = true;
+
+  recentlyUpdated.add(Number(id));
+  setTimeout(() => recentlyUpdated.delete(Number(id)), 5000);
 
   const { error } = await sb
     .from('members')
@@ -290,16 +294,21 @@ function setupRealtime() {
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'members' },
       payload => {
-        const idx = members.findIndex(m => Number(m.id) === Number(payload.new.id));
+        const mid = Number(payload.new.id);
+        const idx = members.findIndex(m => Number(m.id) === mid);
         if (idx !== -1) {
           const wasUnpaid = !members[idx].paid;
-          members[idx] = { ...members[idx], ...payload.new };
 
-          /* อัปเดตเฉพาะ row ที่เปลี่ยน เพื่อไม่ให้ input ถูก reset */
-          updateRow(payload.new.id);
+          if (!recentlyUpdated.has(mid)) {
+            /* อัปเดตจาก device อื่น (เช่น นักเรียนยืนยันจากหน้าหลัก) */
+            members[idx] = { ...members[idx], ...payload.new };
+          }
+          /* ถ้าเพิ่งอัปเดตเองไว้ → ข้าม เพื่อไม่ให้ค่าที่เพิ่งเซฟถูก overwrite */
+
+          updateRow(mid);
           renderStats();
 
-          if (wasUnpaid && payload.new.paid) {
+          if (wasUnpaid && payload.new.paid && !recentlyUpdated.has(mid)) {
             toast(`🔔 ${members[idx].name} ยืนยันการโอนแล้ว`);
           }
         }
