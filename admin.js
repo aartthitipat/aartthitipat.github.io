@@ -85,7 +85,7 @@ async function loadAll() {
 /* ─────────── RENDER STATS ─────────── */
 function renderStats() {
   const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.reduce((s, m) => s + (m.amount_paid || 0), 0);
+  const sumAmt = members.filter(m => m.paid).reduce((s, m) => s + (m.amount_paid || 0), 0);
 
   document.getElementById('adTotal').textContent = members.length;
   document.getElementById('adPaid').textContent  = paid;
@@ -145,9 +145,12 @@ async function saveAmount(id, amtRow) {
   btn.disabled    = true;
   btn.textContent = '…';
 
+  const now    = new Date().toISOString();
+  const setPaid = val > 0;
+
   const { error } = await sb
     .from('members')
-    .update({ amount_paid: val })
+    .update({ amount_paid: val, paid: setPaid, paid_at: setPaid ? now : null })
     .eq('id', id);
 
   if (error) {
@@ -159,7 +162,11 @@ async function saveAmount(id, amtRow) {
 
   /* อัปเดต local state */
   const idx = members.findIndex(m => Number(m.id) === Number(id));
-  if (idx !== -1) members[idx].amount_paid = val;
+  if (idx !== -1) {
+    members[idx].amount_paid = val;
+    members[idx].paid        = setPaid;
+    members[idx].paid_at     = setPaid ? now : null;
+  }
 
   /* อัปเดต pill ให้แสดงยอดใหม่ทันที + อัปเดต stats */
   updateRow(id);
@@ -190,7 +197,7 @@ async function resetPaid(id) {
     return;
   }
 
-  const idx = members.findIndex(m => m.id === id);
+  const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) {
     members[idx].paid    = false;
     members[idx].paid_at = null;
@@ -275,7 +282,7 @@ function setupRealtime() {
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'members' },
       payload => {
-        const idx = members.findIndex(m => m.id === payload.new.id);
+        const idx = members.findIndex(m => Number(m.id) === Number(payload.new.id));
         if (idx !== -1) {
           const wasUnpaid = !members[idx].paid;
           members[idx] = { ...members[idx], ...payload.new };
@@ -295,7 +302,7 @@ function setupRealtime() {
 
 /* อัปเดตเฉพาะ row ที่เปลี่ยน (ไม่ reset input ที่กรอกค้างไว้) */
 function updateRow(id) {
-  const m   = members.find(x => x.id === id);
+  const m   = members.find(x => Number(x.id) === Number(id));
   const row = document.querySelector(`.admin-row[data-id="${id}"]`);
   if (!m || !row) return;
 

@@ -74,7 +74,7 @@ function setupModal() {
 }
 
 function openModal(id) {
-  const m = members.find(x => x.id === id);
+  const m = members.find(x => Number(x.id) === Number(id));
   if (!m) return;
   activeMid = id;
 
@@ -146,7 +146,7 @@ async function confirmPayment() {
     return;
   }
 
-  const idx = members.findIndex(m => m.id === activeMid);
+  const idx = members.findIndex(m => Number(m.id) === Number(activeMid));
   if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; members[idx].amount_paid = amtPaid; }
 
   renderMembers();
@@ -160,11 +160,11 @@ function setupRealtime() {
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'members' },
       payload => {
-        const idx = members.findIndex(m => m.id === payload.new.id);
+        const idx = members.findIndex(m => Number(m.id) === Number(payload.new.id));
         if (idx !== -1) {
           members[idx] = { ...members[idx], ...payload.new };
           renderMembers();
-          if (activeMid === payload.new.id && payload.new.paid) setModalAction(true);
+          if (Number(activeMid) === Number(payload.new.id) && payload.new.paid) setModalAction(true);
         }
       }
     )
