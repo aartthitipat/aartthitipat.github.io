@@ -68,6 +68,11 @@
         </div>
       </div>
 
+      <!-- Reset all -->
+      <button class="btn-reset-all" id="resetAllBtn" onclick="resetAllAmounts()">
+        ↺ รีเซ็ตยอดเงินทั้งหมด
+      </button>
+
       <!-- ═══ QR UPLOAD SECTION ═══ -->
       <div class="qr-upload-card">
         <div class="sec-lbl" style="margin-bottom:14px">QR Code สำหรับชำระเงิน</div>
@@ -87,6 +92,26 @@
         </label>
         <input type="file" id="qrInput" accept="image/*" style="display:none" />
         <p class="upload-hint">รองรับ JPG, PNG, WEBP · ขนาดไม่เกิน 2MB</p>
+      </div>
+
+      <!-- บันทึกการใช้เงิน -->
+      <div class="expense-card">
+        <div class="sec-lbl" style="margin-bottom:14px">บันทึกการใช้เงิน</div>
+        <div class="expense-form">
+          <input class="expense-desc-input" id="expDesc" type="text"
+                 placeholder="รายการ เช่น ซื้อกระดาษ A4" />
+          <div class="expense-amt-row">
+            <span class="amt-prefix">฿</span>
+            <input class="amt-input" id="expAmt" type="number" min="0"
+                   placeholder="จำนวนเงิน" style="flex:1" />
+            <button class="btn-save-amt" id="addExpBtn" onclick="addExpense()">+ เพิ่ม</button>
+          </div>
+        </div>
+        <div id="expenseList"></div>
+        <div class="expense-total" id="expenseTotal" style="display:none">
+          <span>รวมที่ใช้ไป</span>
+          <span class="expense-total-val" id="expTotalVal">฿0</span>
+        </div>
       </div>
 
       <!-- รายชื่อ -->

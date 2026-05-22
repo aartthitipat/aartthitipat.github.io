@@ -81,6 +81,7 @@ async function loadAll() {
   renderAdminList();
   renderStats();
   renderQRPreview(settingsRes.data?.qr_url || null);
+  loadExpenses();
 }
 
 /* ─────────── RENDER STATS ─────────── */
@@ -204,7 +205,7 @@ async function resetPaid(id) {
 
   const { error } = await sb
     .from('members')
-    .update({ paid: false, paid_at: null })
+    .update({ paid: false, paid_at: null, amount_paid: 0 })
     .eq('id', id);
 
   if (btn) btn.disabled = false;
@@ -216,8 +217,9 @@ async function resetPaid(id) {
 
   const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) {
-    members[idx].paid    = false;
-    members[idx].paid_at = null;
+    members[idx].paid        = false;
+    members[idx].paid_at     = null;
+    members[idx].amount_paid = 0;
   }
 
   updateRow(id);
@@ -225,8 +227,129 @@ async function resetPaid(id) {
   toast('↺ รีเซ็ตสถานะเป็นยังไม่โอนแล้ว');
 }
 
+/* ─────────── RESET ALL AMOUNTS ─────────── */
+async function resetAllAmounts() {
+  if (!confirm('รีเซ็ตยอดเงินทั้งหมดจริงหรือ?\nข้อมูลการชำระเงินของทุกคนจะถูกล้างเป็น 0')) return;
+
+  const btn = document.getElementById('resetAllBtn');
+  btn.disabled    = true;
+  btn.textContent = 'กำลังรีเซ็ต…';
+
+  const { error } = await sb
+    .from('members')
+    .update({ paid: false, paid_at: null, amount_paid: 0 })
+    .gt('id', 0);
+
+  btn.disabled    = false;
+  btn.textContent = '↺ รีเซ็ตยอดเงินทั้งหมด';
+
+  if (error) { toast('❌ รีเซ็ตไม่สำเร็จ: ' + error.message); return; }
+
+  members.forEach(m => { m.paid = false; m.paid_at = null; m.amount_paid = 0; });
+  renderAdminList();
+  renderStats();
+  toast('↺ รีเซ็ตยอดเงินทั้งหมดเรียบร้อย');
+}
+
+/* ─────────── EXPENSES ─────────── */
+let expenses = [];
+
+async function loadExpenses() {
+  const { data, error } = await sb
+    .from('expenses')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('expenseList').innerHTML =
+      `<p style="font-size:12px;color:var(--red);text-align:center;padding:12px">
+         ⚠ ยังไม่มีตาราง expenses — กรุณารัน SQL ใน Supabase ก่อน
+       </p>`;
+    return;
+  }
+
+  expenses = data || [];
+  renderExpenses();
+}
+
+function renderExpenses() {
+  const list     = document.getElementById('expenseList');
+  const totalEl  = document.getElementById('expenseTotal');
+  const totalVal = document.getElementById('expTotalVal');
+
+  if (expenses.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0">ยังไม่มีรายการ</p>';
+    totalEl.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = expenses.map(e => `
+    <div class="expense-item">
+      <div class="expense-item-info">
+        <div class="expense-item-desc">${esc(e.description)}</div>
+        <div class="expense-item-date">${fmtDate(e.created_at)}</div>
+      </div>
+      <div class="expense-item-right">
+        <span class="expense-amt">฿${Number(e.amount).toLocaleString()}</span>
+        <button class="btn-del-expense" onclick="deleteExpense(${e.id})" title="ลบ">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  totalEl.style.display = 'flex';
+  totalVal.textContent  = '฿' + total.toLocaleString();
+}
+
+async function addExpense() {
+  const descInput = document.getElementById('expDesc');
+  const amtInput  = document.getElementById('expAmt');
+  const btn       = document.getElementById('addExpBtn');
+
+  const desc = descInput.value.trim();
+  const amt  = parseInt(amtInput.value);
+
+  if (!desc)          { toast('⚠ กรุณาใส่ชื่อรายการ'); return; }
+  if (!amt || amt <= 0) { toast('⚠ กรุณาใส่จำนวนเงิน'); return; }
+
+  btn.disabled    = true;
+  btn.textContent = '…';
+
+  const { data, error } = await sb
+    .from('expenses')
+    .insert({ description: desc, amount: amt })
+    .select()
+    .single();
+
+  btn.disabled    = false;
+  btn.textContent = '+ เพิ่ม';
+
+  if (error) { toast('❌ เพิ่มไม่สำเร็จ: ' + error.message); return; }
+
+  expenses.unshift(data);
+  descInput.value = '';
+  amtInput.value  = '';
+  renderExpenses();
+  toast(`✓ บันทึก "${desc}" ฿${amt.toLocaleString()}`);
+}
+
+async function deleteExpense(id) {
+  const { error } = await sb.from('expenses').delete().eq('id', id);
+  if (error) { toast('❌ ลบไม่สำเร็จ: ' + error.message); return; }
+  expenses = expenses.filter(e => e.id !== id);
+  renderExpenses();
+  toast('↺ ลบรายการเรียบร้อย');
+}
+
 /* ─────────── QR UPLOAD ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('expDesc').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('expAmt').focus();
+  });
+  document.getElementById('expAmt').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addExpense();
+  });
+
   const input = document.getElementById('qrInput');
   input.addEventListener('change', e => {
     const file = e.target.files[0];

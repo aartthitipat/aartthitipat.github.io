@@ -679,6 +679,136 @@ a      { text-decoration: none; color: inherit; }
 .btn-reset-amt:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ══════════════
+   RESET ALL BUTTON (admin.html)
+══════════════ */
+.btn-reset-all {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-reset-all:hover    { background: rgba(220,38,38,.08); border-color: var(--red); color: var(--red); }
+.btn-reset-all:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ══════════════
+   EXPENSE SECTION (admin.html)
+══════════════ */
+.expense-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 28px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.expense-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.expense-desc-input {
+  width: 100%;
+  padding: 10px 13px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.25s, color 0.25s;
+}
+.expense-desc-input:focus { border-color: var(--accent); }
+
+.expense-amt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.expense-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.expense-item-info { flex: 1; min-width: 0; }
+
+.expense-item-desc {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expense-item-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.expense-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.expense-amt {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--red);
+}
+
+.btn-del-expense {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-del-expense:hover { background: rgba(220,38,38,.1); border-color: var(--red); color: var(--red); }
+
+.expense-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(220,38,38,.07);
+  border: 1px solid rgba(220,38,38,.2);
+  border-radius: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.expense-total-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--red);
+}
+
+/* ══════════════
    TOAST
 ══════════════ */
 .toast-wrap {
