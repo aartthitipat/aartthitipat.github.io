@@ -110,8 +110,7 @@ function renderAdminList() {
             class="amt-input"
             type="number"
             min="0"
-            placeholder="ใส่จำนวนเงิน"
-            value="${m.amount_paid > 0 ? m.amount_paid : ''}"
+            placeholder="เพิ่มจำนวนเงิน"
             onkeydown="if(event.key==='Enter') saveAmount(${m.id}, this.parentElement)"
           />
           <button class="btn-save-amt" onclick="saveAmount(${m.id}, this.parentElement)">
@@ -154,12 +153,16 @@ async function saveAmount(id, amtRow) {
   recentlyUpdated.add(Number(id));
   setTimeout(() => recentlyUpdated.delete(Number(id)), 5000);
 
-  const now    = new Date().toISOString();
-  const setPaid = val > 0;
+  const member     = members.find(m => Number(m.id) === Number(id));
+  const currentAmt = Number(member?.amount_paid) || 0;
+  const newTotal   = currentAmt + val;
+
+  const now     = new Date().toISOString();
+  const setPaid = newTotal > 0;
 
   const { error } = await sb
     .from('members')
-    .update({ amount_paid: val, paid: setPaid, paid_at: setPaid ? now : null })
+    .update({ amount_paid: newTotal, paid: setPaid, paid_at: setPaid ? now : null })
     .eq('id', id);
 
   if (error) {
@@ -172,10 +175,12 @@ async function saveAmount(id, amtRow) {
   /* อัปเดต local state */
   const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) {
-    members[idx].amount_paid = val;
+    members[idx].amount_paid = newTotal;
     members[idx].paid        = setPaid;
     members[idx].paid_at     = setPaid ? now : null;
   }
+
+  input.value = '';
 
   /* อัปเดต pill ให้แสดงยอดใหม่ทันที + อัปเดต stats */
   updateRow(id);
@@ -184,7 +189,7 @@ async function saveAmount(id, amtRow) {
   btn.disabled    = false;
   btn.textContent = '✓ บันทึกแล้ว';
   setTimeout(() => { btn.textContent = 'บันทึก'; }, 2000);
-  toast(`✓ บันทึก ฿${val.toLocaleString()} เรียบร้อย`);
+  toast(`✓ เพิ่ม ฿${val.toLocaleString()} → รวม ฿${newTotal.toLocaleString()}`);
 }
 
 /* ─────────── RESET PAID STATUS ─────────── */

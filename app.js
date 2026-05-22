@@ -135,10 +135,14 @@ async function confirmPayment() {
   btn.disabled    = true;
   btn.textContent = 'กำลังบันทึก…';
 
+  const member     = members.find(m => Number(m.id) === Number(activeMid));
+  const currentAmt = Number(member?.amount_paid) || 0;
+  const newTotal   = currentAmt + amtPaid;
+
   const now = new Date().toISOString();
   const { error } = await sb
     .from('members')
-    .update({ paid: true, paid_at: now, amount_paid: amtPaid })
+    .update({ paid: true, paid_at: now, amount_paid: newTotal })
     .eq('id', activeMid);
 
   if (error) {
@@ -149,7 +153,7 @@ async function confirmPayment() {
   }
 
   const idx = members.findIndex(m => Number(m.id) === Number(activeMid));
-  if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; members[idx].amount_paid = amtPaid; }
+  if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; members[idx].amount_paid = newTotal; }
 
   renderMembers();
   setModalAction(true);
