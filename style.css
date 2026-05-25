@@ -405,6 +405,33 @@ a      { text-decoration: none; color: inherit; }
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
+}
+
+.qr-scanned-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 163, 74, 0.88);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #fff;
+  animation: fadeIn 0.3s ease;
+}
+
+.qr-scanned-check {
+  font-size: 52px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.qr-scanned-text {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .qr-wrap img {
@@ -464,6 +491,21 @@ a      { text-decoration: none; color: inherit; }
   font-size: 15px;
   font-weight: 700;
 }
+
+.btn-cash {
+  width: 100%;
+  margin-top: 8px;
+  padding: 13px 20px;
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1.5px solid rgba(22, 163, 74, 0.40);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-cash:hover    { background: rgba(22, 163, 74, 0.18); }
+.btn-cash:disabled { opacity: 0.40; cursor: not-allowed; }
 
 /* ══════════════
    QR UPLOAD (admin.html)
@@ -809,6 +851,145 @@ a      { text-decoration: none; color: inherit; }
 }
 
 /* ══════════════
+   WEEK INDICATOR (index.html)
+══════════════ */
+.week-indicator {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 14px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+/* Week stat line on member row */
+.m-week-stat {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.owe-badge {
+  background: rgba(220, 38, 38, 0.10);
+  color: var(--red);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* ══════════════
+   WEEK LIST IN MODAL (index.html)
+══════════════ */
+.week-list {
+  width: 100%;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.week-item {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.week-item.paid {
+  background: var(--green-bg);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.week-num {
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+  min-width: 52px;
+  font-size: 11px;
+}
+
+.week-date {
+  flex: 1;
+  color: var(--text);
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.week-status {
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.week-status.paid   { color: var(--green); }
+.week-status.unpaid { color: var(--muted); }
+
+/* Pay week hint in modal */
+.pay-week-hint {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* ══════════════
+   ADMIN WEEK ROWS (admin.html)
+══════════════ */
+.week-admin-list {
+  margin-top: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.week-admin-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.week-admin-label {
+  flex: 1;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.week-admin-label.cur-week {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.week-tick {
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.week-tick.paid   { color: var(--green); }
+.week-tick.unpaid { color: var(--muted); }
+
+.pill-owe {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+
+/* ══════════════
    TOAST
 ══════════════ */
 .toast-wrap {
@@ -831,4 +1012,303 @@ a      { text-decoration: none; color: inherit; }
   font-weight: 600;
   white-space: nowrap;
   box-shadow: var(--shadow);
+}
+
+/* ══════════════════════════════════════
+   STUDENT PAGE (student.html)
+══════════════════════════════════════ */
+
+/* ── Login card ── */
+.student-login-card {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 36px 28px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  text-align: center;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.student-login-icon {
+  font-size: 42px;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+
+.student-login-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.student-login-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+/* ── Profile card ── */
+.stu-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.stu-num-badge {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 20px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.25s, color 0.25s;
+}
+
+.stu-info { flex: 1; min-width: 0; }
+
+.stu-name {
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stu-sid {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Status banner ── */
+.stu-status-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  margin-bottom: 22px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.stu-status-card.paid {
+  background: var(--green-bg);
+  border: 1.5px solid rgba(34, 197, 94, 0.30);
+}
+
+.stu-status-card.unpaid {
+  background: rgba(220, 38, 38, 0.07);
+  border: 1.5px solid rgba(220, 38, 38, 0.25);
+}
+
+.stu-status-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.stu-status-icon.paid   { background: var(--green); color: #fff; }
+.stu-status-icon.unpaid { background: var(--red);   color: #fff; }
+
+.stu-status-body { flex: 1; }
+
+.stu-status-title {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.stu-status-card.paid   .stu-status-title { color: var(--green); }
+.stu-status-card.unpaid .stu-status-title { color: var(--red); }
+
+.stu-status-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ── Week history list ── */
+.stu-week-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 24px;
+}
+
+.stu-week-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.stu-week-item.paid {
+  background: var(--green-bg);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.stu-week-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stu-week-check {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.stu-week-check.paid {
+  background: var(--green);
+  color: #fff;
+}
+
+.stu-week-check.unpaid {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 2px dashed var(--border);
+  font-size: 12px;
+}
+
+.stu-week-label {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stu-week-date {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.stu-cur-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  letter-spacing: 0.3px;
+}
+
+.stu-week-amt {
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.stu-week-amt.paid   { color: var(--green); }
+.stu-week-amt.unpaid { color: var(--muted); }
+
+.stu-owe-tag {
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--red);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── QR + Pay card ── */
+.stu-qr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px 20px;
+  text-align: center;
+  margin-bottom: 32px;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.stu-qr-hint {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin: 6px 0 18px;
+}
+
+.stu-qr-wrap {
+  width: 230px;
+  height: 230px;
+  margin: 0 auto 18px;
+  background: #fff;
+  border-radius: 18px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 10px;
+  box-shadow: var(--shadow);
+}
+
+.stu-qr-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.stu-amt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.stu-amt-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ── Paid banner (all done) ── */
+.stu-paid-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 20px;
+  background: var(--green-bg);
+  border: 1.5px solid rgba(34, 197, 94, 0.30);
+  border-radius: var(--radius);
+  margin-bottom: 32px;
+  text-align: center;
 }
