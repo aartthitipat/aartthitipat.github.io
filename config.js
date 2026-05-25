@@ -14,6 +14,63 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 /* ── Supabase client ── */
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* ── Weekly payment config ── */
+const WEEK_START       = '2026-05-25'; // วันจันทร์แรกที่เริ่มเก็บเงิน
+const AMOUNT_PER_WEEK  = 20;
+const PROMPTPAY_PHONE  = '0950979168'; // เบอร์ PromptPay
+
+/* ── Week helpers (ใช้ร่วมกันทั้งสองหน้า) ── */
+function _toISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function currentMondayISO() {
+  const now  = new Date();
+  const day  = now.getDay();              // 0=Sun 1=Mon
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon  = new Date(now);
+  mon.setDate(mon.getDate() + diff);
+  return _toISO(mon);
+}
+
+function getAllWeekISOs() {
+  const weeks   = [];
+  const current = currentMondayISO();
+  let cursor = WEEK_START;
+  while (cursor <= current) {
+    weeks.push(cursor);
+    const d = new Date(cursor + 'T12:00:00');
+    d.setDate(d.getDate() + 7);
+    cursor = _toISO(d);
+  }
+  return weeks;
+}
+
+function fmtWeekDate(isoDate) {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return new Date(y, m - 1, d)
+    .toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+}
+
+/* member = object from members table (has .amount_paid) */
+function getMemberWeekStatus(member) {
+  const weeks     = getAllWeekISOs();
+  const amtPaid   = Number(member.amount_paid) || 0;
+  const weeksPaid = Math.floor(amtPaid / AMOUNT_PER_WEEK);
+  const weeksOwed = Math.max(0, weeks.length - weeksPaid);
+  return {
+    weeks,
+    weeksPaid,
+    weeksOwed,
+    isCurrentPaid : weeksPaid >= weeks.length,
+    amtOwed       : weeksOwed * AMOUNT_PER_WEEK,
+    amtPaid,
+  };
+}
+
 /* ══════════════════════════════════════════════════════
    ฟังก์ชันใช้ร่วมกัน (ทั้ง index.html และ admin.html)
    ══════════════════════════════════════════════════════ */

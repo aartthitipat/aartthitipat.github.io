@@ -15,6 +15,7 @@
     <span class="header-title">เงินห้อง</span>
     <div class="header-right">
       <button class="btn-sm" id="themeBtn">🌙 Dark</button>
+      <a class="btn-sm" href="student.html">👤 ของฉัน</a>
       <a class="btn-sm" href="admin.html">Admin →</a>
     </div>
   </header>
@@ -39,15 +40,18 @@
         </div>
         <div class="stat-card">
           <div class="stat-val green" id="stPaid">—</div>
-          <div class="stat-lbl">โอนแล้ว</div>
+          <div class="stat-lbl">จ่ายสัปดาห์นี้</div>
         </div>
         <div class="stat-card">
           <div class="stat-val" id="stLeft">—</div>
-          <div class="stat-lbl">รอโอน</div>
+          <div class="stat-lbl">รอจ่าย</div>
         </div>
       </div>
+      <div class="week-indicator">
+        📅 <span id="weekLabel">กำลังโหลด…</span>
+      </div>
       <div class="sum-banner">
-        <span class="sum-banner-lbl">ยอดรวมที่โอนแล้ว</span>
+        <span class="sum-banner-lbl">ยอดรวมที่เก็บได้</span>
         <span class="sum-banner-val green" id="stSum">฿0</span>
       </div>
 
@@ -68,14 +72,19 @@
       <div class="modal-badge" id="mNum"></div>
       <div class="modal-name"  id="mName"></div>
       <div class="modal-amt"   id="mAmt"></div>
-      <div class="modal-hint">สแกน QR เพื่อโอนเงิน</div>
-      <div class="qr-wrap">
+      <div class="modal-hint" id="mHint">สแกน QR เพื่อโอนเงิน</div>
+      <div class="qr-wrap" id="qrWrap">
         <img id="qrImg" src="" alt="QR Code" style="display:none" />
         <div id="qrNoImg" class="qr-none-msg">
           <span style="font-size:28px">📷</span>
           <span style="font-size:13px">Admin ยังไม่ได้อัปโหลด QR</span>
         </div>
+        <div class="qr-scanned-overlay" id="qrScanned" style="display:none">
+          <div class="qr-scanned-check">✓</div>
+          <div class="qr-scanned-text">สแกนแล้ว</div>
+        </div>
       </div>
+      <div class="week-list" id="weekList"></div>
       <div id="modalAction"></div>
     </div>
   </div>

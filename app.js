@@ -4,7 +4,6 @@
 
 let members   = [];
 let activeMid = null;
-let qrImageUrl = null;   // cache QR จาก settings
 
 /* ─────────── INIT ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,11 +18,7 @@ async function loadAll() {
   document.getElementById('loadWrap').style.display      = 'block';
   document.getElementById('memberContent').style.display = 'none';
 
-  /* โหลดพร้อมกัน */
-  const [membersRes, settingsRes] = await Promise.all([
-    sb.from('members').select('*').order('number', { ascending: true }),
-    sb.from('settings').select('qr_url').eq('id', 1).single()
-  ]);
+  const membersRes = await sb.from('members').select('*').order('number', { ascending: true });
 
   if (membersRes.error) {
     document.getElementById('loadWrap').innerHTML = `
@@ -35,8 +30,7 @@ async function loadAll() {
     return;
   }
 
-  members    = membersRes.data || [];
-  qrImageUrl = settingsRes.data?.qr_url || null;
+  members = membersRes.data || [];
 
   renderMembers();
   document.getElementById('loadWrap').style.display      = 'none';
@@ -45,26 +39,46 @@ async function loadAll() {
 
 /* ─────────── RENDER รายชื่อ ─────────── */
 function renderMembers() {
-  const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
+  const curWeek = currentMondayISO();
+
+  let paidThisWeek   = 0;
+  let totalCollected = 0;
+
+  members.forEach(m => {
+    const s = getMemberWeekStatus(m);
+    if (s.isCurrentPaid) paidThisWeek++;
+    totalCollected += s.amtPaid;
+  });
 
   document.getElementById('stTotal').textContent = members.length;
-  document.getElementById('stPaid').textContent  = paid;
-  document.getElementById('stLeft').textContent  = members.length - paid;
-  document.getElementById('stSum').textContent   = '฿' + sumAmt.toLocaleString();
+  document.getElementById('stPaid').textContent  = paidThisWeek;
+  document.getElementById('stLeft').textContent  = members.length - paidThisWeek;
+  document.getElementById('stSum').textContent   = '฿' + totalCollected.toLocaleString();
 
-  document.getElementById('memberList').innerHTML = members.map(m => `
-    <div class="member-row" onclick="openModal(${m.id})">
-      <div class="num-badge ${m.paid ? 'paid' : ''}">${m.number}</div>
-      <div class="m-info">
-        <div class="m-name">${esc(m.name)}</div>
-        <div class="m-amt">${esc(m.student_id)}</div>
-      </div>
-      <span class="pill ${m.paid ? 'paid' : 'pending'}">
-        ${m.paid ? '✓ โอนแล้ว' : 'รอโอน'}
-      </span>
-    </div>
-  `).join('');
+  const weeks = getAllWeekISOs();
+  document.getElementById('weekLabel').textContent =
+    `สัปดาห์ที่ ${weeks.length}  ·  ${fmtWeekDate(curWeek)}`;
+
+  document.getElementById('memberList').innerHTML = members.map(m => {
+    const s = getMemberWeekStatus(m);
+    return `
+      <div class="member-row" onclick="openModal(${m.id})">
+        <div class="num-badge ${s.isCurrentPaid ? 'paid' : ''}">${m.number}</div>
+        <div class="m-info">
+          <div class="m-name">${esc(m.name)}</div>
+          <div class="m-amt">${esc(m.student_id)}</div>
+          <div class="m-week-stat">
+            จ่ายแล้ว ${s.weeksPaid}/${s.weeks.length} สัปดาห์
+            ${s.weeksOwed > 0
+              ? `<span class="owe-badge">ค้าง ฿${s.amtOwed}</span>`
+              : ''}
+          </div>
+        </div>
+        <span class="pill ${s.isCurrentPaid ? 'paid' : 'pending'}">
+          ${s.isCurrentPaid ? '✓ จ่ายแล้ว' : 'รอจ่าย'}
+        </span>
+      </div>`;
+  }).join('');
 }
 
 /* ─────────── QR MODAL ─────────── */
@@ -84,20 +98,30 @@ function openModal(id) {
   document.getElementById('mName').textContent = m.name;
   document.getElementById('mAmt').textContent  = m.student_id;
 
-  /* แสดง QR Image */
-  const img = document.getElementById('qrImg');
-  if (qrImageUrl) {
-    img.src   = qrImageUrl;
-    img.style.display = 'block';
-    document.getElementById('qrNoImg').style.display = 'none';
-  } else {
-    img.src   = '';
-    img.style.display = 'none';
-    document.getElementById('qrNoImg').style.display = 'flex';
-  }
-
-  setModalAction(m.paid, m.amount_paid);
+  refreshModal(id);
   document.getElementById('qrOverlay').classList.add('show');
+}
+
+function refreshModal(id) {
+  const m = members.find(x => Number(x.id) === Number(id));
+  if (!m) return;
+  const s = getMemberWeekStatus(m);
+
+  /* QR — always show PromptPay, amount = what they owe (min 20) */
+  const qrAmt = s.amtOwed > 0 ? s.amtOwed : AMOUNT_PER_WEEK;
+  const img   = document.getElementById('qrImg');
+  img.src = `https://promptpay.io/${PROMPTPAY_PHONE}/${qrAmt}`;
+  img.style.display = 'block';
+  document.getElementById('qrNoImg').style.display = 'none';
+
+  /* Hint text */
+  document.getElementById('mHint').textContent = s.amtOwed > 0
+    ? `สแกน QR โอน ฿${s.amtOwed}${s.weeksOwed > 1 ? ` (${s.weeksOwed} สัปดาห์)` : ''}`
+    : 'สแกน QR เพื่อโอนเงิน';
+
+  document.getElementById('qrScanned').style.display = s.isCurrentPaid ? 'flex' : 'none';
+  renderWeekList(s);
+  renderModalAction(s);
 }
 
 function closeModal() {
@@ -105,59 +129,96 @@ function closeModal() {
   activeMid = null;
 }
 
-function setModalAction(isPaid, amountPaid) {
+/* ─────────── WEEK TICK LIST IN MODAL ─────────── */
+function renderWeekList(s) {
+  const curWeek = currentMondayISO();
+  document.getElementById('weekList').innerHTML = s.weeks.map((w, i) => {
+    const paid  = i < s.weeksPaid;
+    const isCur = w === curWeek;
+    return `
+      <div class="week-item ${paid ? 'paid' : 'unpaid'}">
+        <span class="week-num">ส.${i + 1}${isCur ? ' ★' : ''}</span>
+        <span class="week-date">${fmtWeekDate(w)}</span>
+        <span class="week-status ${paid ? 'paid' : 'unpaid'}">
+          ${paid ? `✓ ฿${AMOUNT_PER_WEEK}` : `ค้าง ฿${AMOUNT_PER_WEEK}`}
+        </span>
+      </div>`;
+  }).join('');
+}
+
+/* ─────────── MODAL ACTION ─────────── */
+function renderModalAction(s) {
   const el = document.getElementById('modalAction');
-  if (isPaid) {
-    el.innerHTML = `<div class="paid-box">✓ ยืนยันการโอนเรียบร้อยแล้ว</div>`;
-  } else {
+  if (s.isCurrentPaid) {
     el.innerHTML = `
+      <div class="paid-box">
+        ✓ ชำระครบแล้ว ${s.weeksPaid}/${s.weeks.length} สัปดาห์
+      </div>`;
+  } else {
+    const defaultAmt = s.weeksOwed * AMOUNT_PER_WEEK;
+    el.innerHTML = `
+      <div class="pay-week-hint">
+        ค้าง ${s.weeksOwed} สัปดาห์ · ฿${s.amtOwed}
+      </div>
       <div class="modal-amt-row">
         <span class="modal-amt-prefix">฿</span>
         <input class="modal-amt-input" id="modalAmtInput"
-               type="number" min="0" placeholder="จำนวนเงินที่โอน" />
+               type="number" min="20" step="20" value="${defaultAmt}" />
       </div>
       <button class="btn-primary" style="width:100%;margin-top:10px" id="payBtn">
-        ✓ ยืนยันว่าโอนแล้ว
+        📱 ยืนยันโอนผ่าน QR
+      </button>
+      <button class="btn-cash" id="cashBtn">
+        💵 จ่ายเป็นเงินสด
       </button>`;
+    document.getElementById('payBtn').addEventListener('click',  confirmPayment);
+    document.getElementById('cashBtn').addEventListener('click', confirmPayment);
     document.getElementById('modalAmtInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') confirmPayment();
     });
-    document.getElementById('payBtn').addEventListener('click', confirmPayment);
   }
 }
 
 /* ─────────── CONFIRM PAYMENT ─────────── */
 async function confirmPayment() {
   const btn      = document.getElementById('payBtn');
+  const cashBtn  = document.getElementById('cashBtn');
   const amtInput = document.getElementById('modalAmtInput');
-  const amtPaid  = parseInt(amtInput?.value) || 0;
+  const amtAdded = parseInt(amtInput?.value) || AMOUNT_PER_WEEK;
 
-  btn.disabled    = true;
-  btn.textContent = 'กำลังบันทึก…';
+  if (btn)     { btn.disabled = true;     btn.textContent = 'กำลังบันทึก…'; }
+  if (cashBtn) { cashBtn.disabled = true; }
 
   const member     = members.find(m => Number(m.id) === Number(activeMid));
   const currentAmt = Number(member?.amount_paid) || 0;
-  const newTotal   = currentAmt + amtPaid;
+  const newTotal   = currentAmt + amtAdded;
+  const weeks      = getAllWeekISOs();
+  const weeksPaid  = Math.floor(newTotal / AMOUNT_PER_WEEK);
+  const isPaid     = weeksPaid >= weeks.length;
+  const now        = new Date().toISOString();
 
-  const now = new Date().toISOString();
   const { error } = await sb
     .from('members')
-    .update({ paid: true, paid_at: now, amount_paid: newTotal })
+    .update({ amount_paid: newTotal, paid: isPaid, paid_at: now })
     .eq('id', activeMid);
 
   if (error) {
-    btn.disabled    = false;
-    btn.textContent = '✓ ยืนยันว่าโอนแล้ว';
+    if (btn)     { btn.disabled = false;     btn.textContent = '📱 ยืนยันโอนผ่าน QR'; }
+    if (cashBtn) { cashBtn.disabled = false; }
     toast('❌ เกิดข้อผิดพลาด กรุณาลองใหม่');
     return;
   }
 
   const idx = members.findIndex(m => Number(m.id) === Number(activeMid));
-  if (idx !== -1) { members[idx].paid = true; members[idx].paid_at = now; members[idx].amount_paid = newTotal; }
+  if (idx !== -1) {
+    members[idx].amount_paid = newTotal;
+    members[idx].paid        = isPaid;
+    members[idx].paid_at     = now;
+  }
 
   renderMembers();
-  setModalAction(true);
-  toast('✓ บันทึกการโอนเงินเรียบร้อย');
+  refreshModal(activeMid);
+  toast(`✓ บันทึก ฿${amtAdded} (รวม ${weeksPaid} สัปดาห์)`);
 }
 
 /* ─────────── REALTIME ─────────── */
@@ -170,21 +231,8 @@ function setupRealtime() {
         if (idx !== -1) {
           members[idx] = { ...members[idx], ...payload.new };
           renderMembers();
-          if (Number(activeMid) === Number(payload.new.id) && payload.new.paid) setModalAction(true);
-        }
-      }
-    )
-    .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'settings' },
-      payload => {
-        if (payload.new?.qr_url) {
-          qrImageUrl = payload.new.qr_url;
-          /* ถ้า modal เปิดอยู่ อัปเดต QR ทันที */
-          if (document.getElementById('qrOverlay').classList.contains('show')) {
-            const img = document.getElementById('qrImg');
-            img.src = qrImageUrl;
-            img.style.display = 'block';
-            document.getElementById('qrNoImg').style.display = 'none';
+          if (activeMid && Number(activeMid) === Number(payload.new.id)) {
+            refreshModal(activeMid);
           }
         }
       }

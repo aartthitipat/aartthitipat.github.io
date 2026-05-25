@@ -3,7 +3,7 @@
    ════════════════════════════════════════ */
 
 let members = [];
-const recentlyUpdated = new Set(); // ป้องกัน Realtime overwrite ค่าที่เพิ่งเซฟ
+const recentlyUpdated = new Set();
 
 /* ─────────── INIT ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,61 +86,89 @@ async function loadAll() {
 
 /* ─────────── RENDER STATS ─────────── */
 function renderStats() {
-  const paid   = members.filter(m => m.paid).length;
-  const sumAmt = members.reduce((s, m) => s + (Number(m.amount_paid) || 0), 0);
+  let paidThisWeek   = 0;
+  let totalCollected = 0;
+
+  members.forEach(m => {
+    const s = getMemberWeekStatus(m);
+    if (s.isCurrentPaid) paidThisWeek++;
+    totalCollected += s.amtPaid;
+  });
 
   document.getElementById('adTotal').textContent = members.length;
-  document.getElementById('adPaid').textContent  = paid;
-  document.getElementById('adSum').textContent   = '฿' + sumAmt.toLocaleString();
+  document.getElementById('adPaid').textContent  = paidThisWeek;
+  document.getElementById('adSum').textContent   = '฿' + totalCollected.toLocaleString();
 }
 
 /* ─────────── RENDER ADMIN LIST ─────────── */
 function renderAdminList() {
-  document.getElementById('adminList').innerHTML = members.map(m => `
-    <div class="admin-row ${m.paid ? 'is-paid' : ''}" data-id="${m.id}">
-      <div class="num-badge ${m.paid ? 'paid' : ''}">${m.number}</div>
+  const curWeek = currentMondayISO();
 
-      <div class="m-info">
-        <div class="m-name">${esc(m.name)}</div>
-        <div class="m-amt">${esc(m.student_id)}</div>
+  document.getElementById('adminList').innerHTML = members.map(m => {
+    const s = getMemberWeekStatus(m);
 
-        <!-- จำนวนเงินที่โอนมา -->
-        <div class="amount-row">
-          <span class="amt-prefix">฿</span>
-          <input
-            class="amt-input"
-            type="number"
-            min="0"
-            placeholder="เพิ่มจำนวนเงิน"
-            onkeydown="if(event.key==='Enter') saveAmount(${m.id}, this.parentElement)"
-          />
-          <button class="btn-save-amt" onclick="saveAmount(${m.id}, this.parentElement)">
-            บันทึก
-          </button>
-          <button class="btn-reset-amt" onclick="resetPaid(${m.id})"
-                  title="รีเซ็ตสถานะ → ยังไม่โอน">
-            ↺
-          </button>
+    /* Week tick rows */
+    const weeksHTML = s.weeks.map((w, i) => {
+      const paid  = i < s.weeksPaid;
+      const isCur = w === curWeek;
+      return `
+        <div class="week-admin-item">
+          <span class="week-admin-label ${isCur ? 'cur-week' : ''}">
+            ส.${i + 1} ${fmtWeekDate(w)}${isCur ? ' ★' : ''}
+          </span>
+          <span class="week-tick ${paid ? 'paid' : 'unpaid'}">
+            ${paid ? `✓ ฿${AMOUNT_PER_WEEK}` : `— ค้าง`}
+          </span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="admin-row ${s.isCurrentPaid ? 'is-paid' : ''}" data-id="${m.id}">
+        <div class="num-badge ${s.weeksPaid > 0 ? 'paid' : ''}">${m.number}</div>
+
+        <div class="m-info">
+          <div class="m-name">${esc(m.name)}</div>
+          <div class="m-amt">${esc(m.student_id)}</div>
+
+          <!-- Week ticks -->
+          <div class="week-admin-list">${weeksHTML}</div>
+
+          <!-- Amount input -->
+          <div class="amount-row">
+            <span class="amt-prefix">฿</span>
+            <input
+              class="amt-input"
+              id="amtInput-${m.id}"
+              type="number"
+              min="0"
+              step="${AMOUNT_PER_WEEK}"
+              value="${AMOUNT_PER_WEEK}"
+              placeholder="${AMOUNT_PER_WEEK}"
+              onkeydown="if(event.key==='Enter') saveAmount(${m.id})"
+            />
+            <button class="btn-save-amt" onclick="saveAmount(${m.id})">บันทึก</button>
+            <button class="btn-reset-amt" onclick="resetPaid(${m.id})" title="รีเซ็ตสถานะ">↺</button>
+          </div>
+
+          ${m.paid_at
+            ? `<div class="m-time">ชำระล่าสุด ${fmtDate(m.paid_at)}</div>`
+            : ''}
         </div>
 
-        ${m.paid && m.paid_at
-          ? `<div class="m-time">ยืนยันเมื่อ ${fmtDate(m.paid_at)}</div>`
-          : ''}
-      </div>
-
-      <span class="pill ${m.paid ? 'paid' : 'pending'}">
-        ${m.paid
-          ? '✓ โอนแล้ว' + (m.amount_paid > 0 ? ' ฿' + m.amount_paid.toLocaleString() : '')
-          : 'รอโอน'}
-      </span>
-    </div>
-  `).join('');
+        <span class="pill ${s.isCurrentPaid ? 'paid' : 'pending'}">
+          ${s.isCurrentPaid ? '✓ ' : ''}${s.weeksPaid}/${s.weeks.length} ส.
+          ${s.amtOwed > 0
+            ? `<br><span class="pill-owe">ค้าง ฿${s.amtOwed}</span>`
+            : ''}
+        </span>
+      </div>`;
+  }).join('');
 }
 
 /* ─────────── SAVE AMOUNT ─────────── */
-async function saveAmount(id, amtRow) {
-  const input = amtRow.querySelector('.amt-input');
-  const btn   = amtRow.querySelector('.btn-save-amt');
+async function saveAmount(id) {
+  const input = document.getElementById(`amtInput-${id}`);
+  const btn   = document.querySelector(`.admin-row[data-id="${id}"] .btn-save-amt`);
   const val   = parseInt(input.value);
 
   if (!val || val <= 0) {
@@ -157,47 +185,41 @@ async function saveAmount(id, amtRow) {
   const member     = members.find(m => Number(m.id) === Number(id));
   const currentAmt = Number(member?.amount_paid) || 0;
   const newTotal   = currentAmt + val;
-
-  const now     = new Date().toISOString();
-  const setPaid = newTotal > 0;
+  const weeks      = getAllWeekISOs();
+  const weeksPaid  = Math.floor(newTotal / AMOUNT_PER_WEEK);
+  const isPaid     = weeksPaid >= weeks.length;
+  const now        = new Date().toISOString();
 
   const { error } = await sb
     .from('members')
-    .update({ amount_paid: newTotal, paid: setPaid, paid_at: setPaid ? now : null })
+    .update({ amount_paid: newTotal, paid: isPaid, paid_at: now })
     .eq('id', id);
 
+  btn.disabled    = false;
+  btn.textContent = 'บันทึก';
+
   if (error) {
-    btn.disabled    = false;
-    btn.textContent = 'บันทึก';
     toast('❌ บันทึกไม่สำเร็จ: ' + error.message);
     return;
   }
 
-  /* อัปเดต local state */
   const idx = members.findIndex(m => Number(m.id) === Number(id));
   if (idx !== -1) {
     members[idx].amount_paid = newTotal;
-    members[idx].paid        = setPaid;
-    members[idx].paid_at     = setPaid ? now : null;
+    members[idx].paid        = isPaid;
+    members[idx].paid_at     = now;
   }
 
-  input.value = '';
-
-  /* อัปเดต pill ให้แสดงยอดใหม่ทันที + อัปเดต stats */
-  updateRow(id);
+  input.value = AMOUNT_PER_WEEK; // reset to default
+  renderAdminList();
   renderStats();
-
-  btn.disabled    = false;
-  btn.textContent = '✓ บันทึกแล้ว';
-  setTimeout(() => { btn.textContent = 'บันทึก'; }, 2000);
-  toast(`✓ เพิ่ม ฿${val.toLocaleString()} → รวม ฿${newTotal.toLocaleString()}`);
+  toast(`✓ เพิ่ม ฿${val} → รวม ฿${newTotal} (${weeksPaid} สัปดาห์)`);
 }
 
-/* ─────────── RESET PAID STATUS ─────────── */
+/* ─────────── RESET ONE MEMBER ─────────── */
 async function resetPaid(id) {
   const row = document.querySelector(`.admin-row[data-id="${id}"]`);
   const btn = row?.querySelector('.btn-reset-amt');
-
   if (btn) btn.disabled = true;
 
   recentlyUpdated.add(Number(id));
@@ -222,12 +244,12 @@ async function resetPaid(id) {
     members[idx].amount_paid = 0;
   }
 
-  updateRow(id);
+  renderAdminList();
   renderStats();
-  toast('↺ รีเซ็ตสถานะเป็นยังไม่โอนแล้ว');
+  toast('↺ รีเซ็ตสถานะเป็นยังไม่ได้ชำระ');
 }
 
-/* ─────────── RESET ALL AMOUNTS ─────────── */
+/* ─────────── RESET ALL ─────────── */
 async function resetAllAmounts() {
   if (!confirm('รีเซ็ตยอดเงินทั้งหมดจริงหรือ?\nข้อมูลการชำระเงินของทุกคนจะถูกล้างเป็น 0')) return;
 
@@ -309,7 +331,7 @@ async function addExpense() {
   const desc = descInput.value.trim();
   const amt  = parseInt(amtInput.value);
 
-  if (!desc)          { toast('⚠ กรุณาใส่ชื่อรายการ'); return; }
+  if (!desc)           { toast('⚠ กรุณาใส่ชื่อรายการ'); return; }
   if (!amt || amt <= 0) { toast('⚠ กรุณาใส่จำนวนเงิน'); return; }
 
   btn.disabled    = true;
@@ -354,14 +376,8 @@ document.addEventListener('DOMContentLoaded', () => {
   input.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast('❌ ไฟล์ใหญ่เกิน 2MB');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { toast('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น'); return; }
+    if (file.size > 2 * 1024 * 1024)    { toast('❌ ไฟล์ใหญ่เกิน 2MB'); return; }
     uploadQR(file);
     input.value = '';
   });
@@ -369,24 +385,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function uploadQR(file) {
   const label = document.getElementById('uploadLabel');
-  label.textContent       = 'กำลังอัปโหลด…';
-  label.style.opacity     = '0.6';
+  label.textContent        = 'กำลังอัปโหลด…';
+  label.style.opacity      = '0.6';
   label.style.pointerEvents = 'none';
 
   const reader = new FileReader();
   reader.onload = async e => {
     const dataUrl = e.target.result;
-
-    const { error } = await sb
-      .from('settings')
-      .upsert({ id: 1, qr_url: dataUrl });
-
-    label.textContent       = '↑ เปลี่ยน QR Code';
-    label.style.opacity     = '';
+    const { error } = await sb.from('settings').upsert({ id: 1, qr_url: dataUrl });
+    label.textContent        = '↑ เปลี่ยน QR Code';
+    label.style.opacity      = '';
     label.style.pointerEvents = '';
-
     if (error) { toast('❌ อัปโหลดไม่สำเร็จ: ' + error.message); return; }
-
     renderQRPreview(dataUrl);
     toast('✓ อัปโหลด QR Code เรียบร้อย');
   };
@@ -425,53 +435,20 @@ function setupRealtime() {
         const mid = Number(payload.new.id);
         const idx = members.findIndex(m => Number(m.id) === mid);
         if (idx !== -1) {
-          const wasUnpaid = !members[idx].paid;
+          const wasUnpaid = !getMemberWeekStatus(members[idx]).isCurrentPaid;
 
           if (!recentlyUpdated.has(mid)) {
-            /* อัปเดตจาก device อื่น (เช่น นักเรียนยืนยันจากหน้าหลัก) */
             members[idx] = { ...members[idx], ...payload.new };
           }
-          /* ถ้าเพิ่งอัปเดตเองไว้ → ข้าม เพื่อไม่ให้ค่าที่เพิ่งเซฟถูก overwrite */
 
-          updateRow(mid);
+          renderAdminList();
           renderStats();
 
-          if (wasUnpaid && payload.new.paid && !recentlyUpdated.has(mid)) {
-            toast(`🔔 ${members[idx].name} ยืนยันการโอนแล้ว`);
+          if (wasUnpaid && getMemberWeekStatus(members[idx]).isCurrentPaid && !recentlyUpdated.has(mid)) {
+            toast(`🔔 ${members[idx].name} ชำระเงินแล้ว`);
           }
         }
       }
     )
     .subscribe();
-}
-
-/* อัปเดตเฉพาะ row ที่เปลี่ยน (ไม่ reset input ที่กรอกค้างไว้) */
-function updateRow(id) {
-  const m   = members.find(x => Number(x.id) === Number(id));
-  const row = document.querySelector(`.admin-row[data-id="${id}"]`);
-  if (!m || !row) return;
-
-  row.className = `admin-row ${m.paid ? 'is-paid' : ''}`;
-
-  const badge = row.querySelector('.num-badge');
-  badge.className = `num-badge ${m.paid ? 'paid' : ''}`;
-
-  const pill = row.querySelector('.pill');
-  pill.className   = `pill ${m.paid ? 'paid' : 'pending'}`;
-  pill.textContent = m.paid
-    ? '✓ โอนแล้ว' + (m.amount_paid > 0 ? ' ฿' + m.amount_paid.toLocaleString() : '')
-    : 'รอโอน';
-
-  /* อัปเดตเวลาที่ยืนยัน */
-  let timeEl = row.querySelector('.m-time');
-  if (m.paid && m.paid_at) {
-    if (!timeEl) {
-      timeEl = document.createElement('div');
-      timeEl.className = 'm-time';
-      row.querySelector('.amount-row').insertAdjacentElement('afterend', timeEl);
-    }
-    timeEl.textContent = `ยืนยันเมื่อ ${fmtDate(m.paid_at)}`;
-  } else if (timeEl) {
-    timeEl.remove();
-  }
 }

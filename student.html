@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>สถานะการชำระเงิน</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <span class="header-title">เงินห้อง</span>
+    <div class="header-right">
+      <button class="btn-sm" id="themeBtn">🌙 Dark</button>
+      <a class="btn-sm" href="index.html">← ภาพรวม</a>
+    </div>
+  </header>
+
+  <!-- ═══ LOGIN ═══ -->
+  <div id="loginSection">
+    <div class="wrap" style="display:flex;align-items:center;min-height:calc(100svh - 58px)">
+      <div style="width:100%">
+        <div class="student-login-card">
+
+          <div class="student-login-icon">💳</div>
+          <h2 class="student-login-title">ตรวจสอบการชำระเงิน</h2>
+          <p class="student-login-sub">ใส่รหัสนักเรียนเพื่อดูสถานะของคุณ</p>
+
+          <div class="field">
+            <label>รหัสนักเรียน</label>
+            <input id="inStudentId" type="text" placeholder="เช่น 12345"
+                   autocomplete="off" inputmode="numeric"
+                   style="font-size:20px;font-weight:700;text-align:center;letter-spacing:2px" />
+          </div>
+
+          <button class="btn-primary" style="width:100%;margin-top:8px;font-size:16px" id="loginBtn">
+            เข้าสู่ระบบ
+          </button>
+          <div class="login-err" id="loginErr"></div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="dashSection" style="display:none">
+    <div class="wrap">
+
+      <!-- Profile card -->
+      <div class="stu-profile-card">
+        <div class="stu-num-badge" id="sNum"></div>
+        <div class="stu-info">
+          <div class="stu-name" id="sName"></div>
+          <div class="stu-sid"  id="sSid"></div>
+        </div>
+        <button class="btn-sm" id="logoutBtn" style="flex-shrink:0">ออก</button>
+      </div>
+
+      <!-- Status banner -->
+      <div class="stu-status-card" id="statusCard"></div>
+
+      <!-- Week history -->
+      <div class="sec-lbl" style="margin-bottom:10px">
+        <span class="live-dot"></span>
+        ประวัติการชำระเงิน
+      </div>
+      <div class="stu-week-list" id="weekList"></div>
+
+      <!-- QR + Pay -->
+      <div id="paySection"></div>
+
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div class="toast-wrap" id="toastWrap">
+    <div class="toast-inner" id="toastMsg"></div>
+  </div>
+
+  <script src="student.js"></script>
+</body>
+</html>
